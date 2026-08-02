@@ -1,0 +1,32 @@
+{
+  "name": "@repo/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "tsc && next build",
+    "start": "node server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@repo/shared": "*",
+    "better-sqlite3": "^11.3.0",
+    "next": "^14.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/ws": "^8.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -813,7 +813,9 @@ export function createSession(id: string, expiresAt: number): void {
 }
 
 export function getSession(id: string) {
-  return getDb().prepare("SELECT * FROM sessions WHERE id = ?").get(id) as
+  return getDb()
+    .prepare("SELECT id, created_at AS createdAt, expires_at AS expiresAt FROM sessions WHERE id = ?")
+    .get(id) as
     | { id: string; createdAt: number; expiresAt: number }
     | undefined;
 }
@@ -2176,7 +2178,6 @@ import { WebSocketServer, WebSocket } from "ws";
 import { wsHub } from "./src/ws/hub";
 import { getAnalysis } from "./src/db/analyses";
 import { getProviderRows } from "./src/db/providers";
-import { ScorecardSchema } from "@repo/shared";
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev, dir: __dirname });
@@ -2797,7 +2798,7 @@ git commit -m "feat: add frontend api client"
 - Consumes: `fetchLatestAnalysis`, `fetchAnalysis`, `retryProvider` (Task 12), `useSessionStore` (Task 5).
 - Produces:
   - `connectAnalysisWs(analysisId: string, sessionId: string, handlers): () => void` in `src/api/ws.ts` — opens `ws://<host>/ws?sessionId=&analysisId=`, returns a close function; auto-reconnect only while the caller's `shouldReconnect` returns true.
-  - Pinia `useAnalysisStore` exposing: `analysis`, `username`, `loading`, `shared`, `banner`, `start(username)`, `restore()`, `loadAnalysis(id)`, `retry(provider)`, `onWsEvent(event)`, `cooldown(provider)`.
+  - Pinia `useAnalysisStore` exposing: `analysis`, `analysisId`, `username`, `loading`, `shared`, `banner`, `start(username)`, `restore()`, `loadAnalysis(id)`, `retry(provider)`, `onWsEvent(event)`, `cooldown(provider)`.
 
 - [ ] **Step 1: Write the failing test**
 

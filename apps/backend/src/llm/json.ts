@@ -27,11 +27,15 @@ export function parseScorecardJson(raw: string, provider: ProviderId): Scorecard
   } catch {
     throw new ScorecardParseError('Invalid JSON from provider', raw);
   }
+  const now = new Date().toISOString();
   const result = ScorecardSchema.safeParse({
     ...(parsed as Record<string, unknown>),
     provider,
     status: 'succeeded',
     progress: 100,
+    startedAt: null,
+    lastUpdated: now,
+    completedAt: now,
   });
   if (!result.success) {
     throw new ScorecardParseError(`Schema validation failed: ${result.error.message}`, raw);

@@ -33,9 +33,12 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/backend/package.json ./package.json
 COPY --from=builder /app/apps/backend/node_modules ./node_modules
-COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/.next ./.next
 COPY --from=builder /app/apps/backend/next.config.mjs ./next.config.mjs
+COPY --from=builder /app/apps/backend/server.ts ./server.ts
+COPY --from=builder /app/apps/backend/src ./src
+COPY --from=builder /app/apps/backend/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/packages/shared ./packages/shared
 RUN mkdir -p /data
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+CMD ["npx", "tsx", "server.ts"]

@@ -467,7 +467,7 @@ Expected: FAIL — `Cannot find module '../pages/api/health'`.
   "scripts": {
     "dev": "tsx server.ts",
     "build": "tsc && next build",
-    "start": "node server.js",
+    "start": "tsx server.ts",
     "test": "jest"
   },
   "dependencies": {
@@ -575,12 +575,15 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/backend/package.json ./package.json
 COPY --from=builder /app/apps/backend/node_modules ./node_modules
-COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/.next ./.next
 COPY --from=builder /app/apps/backend/next.config.mjs ./next.config.mjs
+COPY --from=builder /app/apps/backend/server.ts ./server.ts
+COPY --from=builder /app/apps/backend/src ./src
+COPY --from=builder /app/apps/backend/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/packages/shared ./packages/shared
 RUN mkdir -p /data
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+CMD ["npx", "tsx", "server.ts"]
 ```
 
 `docker-compose.yml` (repo root):
@@ -2082,9 +2085,8 @@ git commit -m "feat: add analysis runner with provider orchestration"
 **Interfaces:**
 - Consumes: `AnalysisEvent` (Task 9).
 - Produces:
-  - `wsHub` singleton in `src/ws/hub.ts`: `subscribe(analysisId: string, ws: WebSocket): () => void`, `publish(analysisId: string, event: AnalysisEvent): void`, `setRunningChecker(fn: (analysisId: string) => boolean): void`.
-  - `server.ts` — custom HTTP server that mounts Next.js and a `WebSocketServer` at path `/ws`, using `wsHub`.
-  - Exported `createWssHandler(getAnalysisById)` helper in `src/ws/hub.ts` for testability: on connection, looks up the analysis; if not `running`, closes immediately.
+  - `wsHub` singleton in `src/ws/hub.ts`: `subscribe(analysisId: string, ws: WebSocket): () => void`, `publish(analysisId: string, event: AnalysisEvent): void`, `setRunningChecker(fn: (analysisId: string) => boolean): void`, `canSubscribe(analysisId: string): boolean`.
+  - `server.ts` — custom HTTP server that mounts Next.js and a `WebSocketServer` at path `/ws`, using `wsHub`; on upgrade it requires `sessionId`, gates via `wsHub.canSubscribe` (running-checker queries `getAnalysis(...)?.status === 'running'`), then subscribes and pushes an initial `{ type: 'state', ... }` snapshot. Connection gating is inline via `canSubscribe` (a separate `createWssHandler` helper is NOT created — the provided code implements gating inline).
 
 - [ ] **Step 1: Write the failing test**
 

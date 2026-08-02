@@ -1,6 +1,12 @@
 export interface WsHandlers {
   onState: (snapshot: unknown) => void;
-  onProviderUpdate: (payload: unknown) => void;
+  onProviderUpdate: (payload: {
+    analysisId: string;
+    provider: string;
+    status: string;
+    progress: number;
+    lastUpdated: string;
+  }) => void;
   onFinal: (payload: { status: string; error?: string }) => void;
   shouldReconnect: () => boolean;
 }

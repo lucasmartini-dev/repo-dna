@@ -4,10 +4,16 @@ import { setActivePinia, createPinia } from 'pinia';
 import { faker } from '@faker-js/faker';
 import AnalysisView from './AnalysisView.vue';
 import { useAnalysisStore } from '../stores/analysis';
+import { useSessionStore } from '../stores/session';
+import { connectAnalysisWs } from '../api/ws';
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
   useRoute: () => ({ query: {} }),
+}));
+
+vi.mock('../api/ws', () => ({
+  connectAnalysisWs: vi.fn(() => vi.fn()),
 }));
 
 const sessionId = faker.string.uuid();
@@ -60,5 +66,44 @@ describe('AnalysisView', () => {
     const wrapper = mount(AnalysisView);
     await flushPromises();
     expect(wrapper.text()).toContain('Retry');
+  });
+
+  it('subscribes to websocket when analysis is running', async () => {
+    const session = useSessionStore();
+    const activeSessionId = session.ensureSession();
+    const store = useAnalysisStore();
+    store.analysisId = analysisId;
+    store.analysis = {
+      id: analysisId,
+      sessionId: activeSessionId,
+      username,
+      status: 'running',
+      error: null,
+      createdAt: new Date().toISOString(),
+      providers: [],
+    } as never;
+    mount(AnalysisView);
+    await flushPromises();
+    expect(connectAnalysisWs).toHaveBeenCalledWith(
+      analysisId,
+      activeSessionId,
+      expect.objectContaining({
+        onState: expect.any(Function),
+        onProviderUpdate: expect.any(Function),
+        onFinal: expect.any(Function),
+        shouldReconnect: expect.any(Function),
+      })
+    );
+  });
+
+  it('subscribes to websocket when analysis is not yet loaded', async () => {
+    const session = useSessionStore();
+    const activeSessionId = session.ensureSession();
+    const store = useAnalysisStore();
+    store.analysisId = analysisId;
+    store.analysis = null;
+    mount(AnalysisView);
+    await flushPromises();
+    expect(connectAnalysisWs).toHaveBeenCalledWith(analysisId, activeSessionId, expect.any(Object));
   });
 });

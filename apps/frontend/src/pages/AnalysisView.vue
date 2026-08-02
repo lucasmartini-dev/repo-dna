@@ -69,7 +69,9 @@ onMounted(async () => {
       return;
     }
   }
-  if (store.isRunning) subscribe();
+  if (store.analysisId && (!store.analysis || store.isRunning)) {
+    subscribe();
+  }
 });
 
 onUnmounted(() => closeWs?.());

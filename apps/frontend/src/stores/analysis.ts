@@ -38,14 +38,14 @@ export const useAnalysisStore = defineStore('analysis', () => {
       analysisId.value = result.analysisId ?? null;
       shared.value = true;
       banner.value = "This GitHub profile is already being analyzed right now — you're watching the live session.";
-      if (analysisId.value) loadAnalysis(analysisId.value);
+      if (analysisId.value) await loadAnalysis(analysisId.value);
       return 'shared';
     }
     username.value = result.username ?? input;
     analysisId.value = result.analysisId ?? null;
     shared.value = false;
     banner.value = null;
-    if (analysisId.value) loadAnalysis(analysisId.value);
+    if (analysisId.value) await loadAnalysis(analysisId.value);
     return 'started';
   }
 

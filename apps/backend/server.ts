@@ -6,6 +6,7 @@ import { WebSocketServer } from 'ws';
 import { wsHub } from './src/ws/hub';
 import { getAnalysis } from './src/db/analyses';
 import { getProviderRows } from './src/db/providers';
+import { getSession } from './src/db/sessions';
 import { ScorecardSchema } from '@repo/shared';
 
 config({ path: resolve(__dirname, '..', '..', '.env') });
@@ -31,10 +32,14 @@ app.prepare().then(() => {
       socket.destroy();
       return;
     }
+    const session = getSession(sessionId);
+    if (!session || session.expiresAt < Date.now()) {
+      socket.destroy();
+      return;
+    }
     wss.handleUpgrade(req, socket, head, (ws) => {
       const analysisId = url.searchParams.get('analysisId');
-      const analysis = analysisId ? getAnalysis(analysisId) : undefined;
-      if (!analysisId || analysis?.sessionId !== sessionId || !wsHub.canSubscribe(analysisId)) {
+      if (!analysisId || !wsHub.canSubscribe(analysisId)) {
         ws.close(4001, 'no running analysis');
         return;
       }

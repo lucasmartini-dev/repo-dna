@@ -24,4 +24,20 @@ describe('wsHub', () => {
     wsHub.publish('a1', { type: 'final', analysisId: 'a1', status: 'succeeded' });
     expect(received).toHaveLength(0);
   });
+
+  it('uses running checker for canSubscribe', () => {
+    wsHub.setRunningChecker((id) => id === 'running-analysis');
+    expect(wsHub.canSubscribe('running-analysis')).toBe(true);
+    expect(wsHub.canSubscribe('completed-analysis')).toBe(false);
+  });
+
+  it('skips sockets that are not open', () => {
+    const received: unknown[] = [];
+    const open = { readyState: 1, send: (m: string) => received.push(JSON.parse(m)) } as unknown as WebSocket;
+    const closed = { readyState: 3, send: (m: string) => received.push(JSON.parse(m)) } as unknown as WebSocket;
+    wsHub.subscribe('a1', open);
+    wsHub.subscribe('a1', closed);
+    wsHub.publish('a1', { type: 'final', analysisId: 'a1', status: 'succeeded' });
+    expect(received).toHaveLength(1);
+  });
 });

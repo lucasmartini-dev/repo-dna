@@ -34,6 +34,7 @@ describe('analysis store', () => {
     expect(store.username).toBe(username);
     expect(store.analysisId).toBe(analysisId);
     expect(store.shared).toBe(false);
+    expect(store.analysis?.status).toBe('running');
   });
 
   it('marks shared when server returns 200', async () => {
@@ -53,6 +54,7 @@ describe('analysis store', () => {
     await store.start(username);
     expect(store.shared).toBe(true);
     expect(store.banner).toContain('already being analyzed');
+    expect(store.analysis?.status).toBe('running');
   });
 
   it('exposes cooldown state', () => {
@@ -66,5 +68,57 @@ describe('analysis store', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('updates provider status via onProviderUpdate', () => {
+    const store = useAnalysisStore();
+    store.analysis = {
+      id: analysisId,
+      sessionId,
+      username,
+      status: 'running',
+      error: null,
+      createdAt: new Date().toISOString(),
+      providers: [
+        {
+          provider: 'gemini',
+          status: 'pending',
+          progress: 0,
+          startedAt: null,
+          lastUpdated: new Date().toISOString(),
+          completedAt: null,
+          dimensions: [],
+          top_repos: [],
+          strengths: [],
+          gaps: [],
+          verdict: { leaning: 'uncertain', summary: '' },
+        },
+      ],
+    } as never;
+    store.onProviderUpdate({
+      analysisId,
+      provider: 'gemini',
+      status: 'running',
+      progress: 50,
+      lastUpdated: '2026-01-01T00:00:00.000Z',
+    });
+    expect(store.analysis.providers[0].status).toBe('running');
+    expect(store.analysis.providers[0].progress).toBe(50);
+  });
+
+  it('finalizes analysis via onFinal', () => {
+    const store = useAnalysisStore();
+    store.analysis = {
+      id: analysisId,
+      sessionId,
+      username,
+      status: 'running',
+      error: null,
+      createdAt: new Date().toISOString(),
+      providers: [],
+    } as never;
+    store.onFinal({ status: 'succeeded', error: 'something' });
+    expect(store.analysis.status).toBe('succeeded');
+    expect(store.analysis.error).toBe('something');
   });
 });

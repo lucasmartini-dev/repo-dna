@@ -2,7 +2,7 @@ import type { AnalyzeContext, LLMProvider } from './provider';
 import { buildSystemPrompt, buildUserPrompt } from './prompts';
 import { parseScorecardJson } from './json';
 
-const API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 export class GeminiProvider implements LLMProvider {
   id = 'gemini' as const;

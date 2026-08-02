@@ -1401,7 +1401,7 @@ export function buildSnapshot(profile: GitHubProfile, repos: GitHubRepo[]): GitH
 
   const recentWindow = Date.now() - 90 * 24 * 60 * 60 * 1000;
   const recentCommits = repos.filter((r) => new Date(r.updated_at).getTime() >= recentWindow).length;
-  const lastPush = repos.length ? repos.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0].updated_at : null;
+  const lastPush = repos.length ? [...repos].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0].updated_at : null;
 
   return {
     profile: {

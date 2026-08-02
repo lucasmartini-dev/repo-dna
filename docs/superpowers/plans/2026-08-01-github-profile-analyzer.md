@@ -3656,7 +3656,7 @@ git commit -m "feat: add report view with scorecard tabs"
 ### Task 17: End-to-End Wiring, README + Final Verification
 
 **Files:**
-- Create: `README.md`
+- Review/refine: `README.md` — ALREADY CREATED ahead of time (commit `6fcde6d` "docs: add project readme with goals, ai-driven workflow and architecture"); this task verifies it is accurate and completes any remaining sections rather than recreating it from scratch.
 - Create: `.env.example`
 - Create: `docker-compose.yml`
 - Modify: root `package.json` scripts (add `docker:up` / `docker:down`)
@@ -3702,7 +3702,7 @@ volumes:
   backend-data:
 ```
 
-`README.md`:
+`README.md` (already created ahead of time at commit `6fcde6d` — verify/refine it; the minimal template below is superseded by that fuller README):
 ```markdown
 # GitHub Profile Analyzer
 

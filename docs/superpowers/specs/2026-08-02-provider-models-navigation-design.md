@@ -118,7 +118,40 @@ The route passes models to `createProviderRows` and `startAnalysisAsync`.
 - `runProviders()` receives a `Map<string, string>` of `providerId -> modelId`.
 - Each provider's `analyze(ctx, modelId)` is called with the selected model.
 
-### 4.3 `LLMProvider` interface
+### 4.3 Staggered provider start
+
+`runProviders()` runs providers sequentially with a staggered delay so WebSocket updates animate one provider at a time in the UI:
+
+```
+Provider 1 starts after 3000ms delay
+Provider 2 starts after +1000ms (4000ms total)
+Provider 3 starts after +1000ms (5000ms total)
+...
+```
+
+Implementation in `runProviders()`:
+
+```ts
+const FIRST_START_DELAY = 3000;
+const INTER_START_DELAY = 1000;
+
+for (let i = 0; i < providerIds.length; i++) {
+  const delay = FIRST_START_DELAY + i * INTER_START_DELAY;
+  const pid = providerIds[i];
+  // Each provider runs concurrently after its delay,
+  // so long-running providers overlap with later starters.
+  promises.push(
+    new Promise<void>((resolve) => setTimeout(resolve, delay)).then(() =>
+      runSingleProvider(pid, ...)
+    )
+  );
+}
+await Promise.all(promises);
+```
+
+This replaces the current `Promise.all(providerIds.map(...))` which starts all providers at once.
+
+### 4.4 `LLMProvider` interface
 
 ```ts
 export interface LLMProvider {
@@ -131,6 +164,22 @@ export interface LLMProvider {
 Each provider uses `model` instead of a hardcoded model string in its API request body.
 
 ## 5. Frontend Changes
+
+### 5.0 Semantic color palette
+
+Applied globally via CSS custom properties:
+
+| Semantic | Color | Hex | Usage |
+|---|---|---|---|
+| Primary | Aurora Purple | `#8B5CF6` | Buttons, links, breadcrumb highlights, progress bars |
+| Secondary | Coral | `#FF6B81` | Accents, hover states |
+| Positive | Eucalyptus | `#44D7A8` | Success status, succeeded provider cards |
+| Information | Blueberry | `#3F51B5` | Info banners, report link |
+| AI / Analytics | Sky Cyan | `#38BDF8` | Provider name badges, model labels |
+| Warning | Amber | `#FBBF24` | Pending status, cooldown indicators |
+| Destructive | Flamingo | `#E67C73` | Failed status, error text, retry buttons |
+
+Provider cards use status-based colors: pending = Warning, running = Primary with progress bar in Primary, succeeded = Positive, failed = Destructive.
 
 ### 5.1 Header breadcrumb navigation
 
@@ -231,13 +280,14 @@ Show `startedAt` and `model` when available:
 | `apps/backend/src/llm/groq.ts` | Use `model` parameter |
 | `apps/backend/src/llm/openrouter.ts` | Use `model` parameter |
 | `apps/backend/src/llm/nvcf.ts` | Use `model` parameter |
-| `apps/backend/src/analysis/runner.ts` | Pass models map through `runProviders` |
+| `apps/backend/src/analysis/runner.ts` | Pass models map through `runProviders`; staggered sequential start with delays |
 | `apps/backend/src/api/router.ts` | Accept and forward models |
 | `apps/backend/pages/api/analyze.ts` | Accept `models` in body, pass to DB and runner |
 | `apps/backend/src/api/summary.ts` | Map `model` field |
 | `apps/frontend/src/App.vue` | Add `<SiteHeader>` |
 | `apps/frontend/src/components/SiteHeader.vue` | **New**: Breadcrumb navigation |
 | `apps/frontend/src/pages/HomeView.vue` | Add model dropdowns per provider |
-| `apps/frontend/src/components/ProviderCard.vue` | Show startedAt and model |
+| `apps/frontend/src/components/ProviderCard.vue` | Show startedAt and model; apply semantic colors per status |
+| `apps/frontend/src/styles/colors.css` | **New**: CSS custom properties for semantic palette |
 | `apps/frontend/src/api/client.ts` | Add `models` to `startAnalysis` |
 | `apps/frontend/src/stores/analysis.ts` | Accept and forward `models` |

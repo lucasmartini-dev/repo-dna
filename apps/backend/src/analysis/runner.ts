@@ -59,7 +59,9 @@ export async function runProviders(
           progress: 100,
           lastUpdated: new Date().toISOString(),
         });
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[provider ${pid}] failed for analysis ${analysisId}: ${msg}`);
         updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });
         sink({
           type: 'provider-update',
@@ -77,8 +79,9 @@ export async function runProviders(
   const anySucceeded = rows.some((r) => r.status === 'succeeded');
   const anyFailed = rows.some((r) => r.status === 'failed');
   const status = anySucceeded && !anyFailed ? 'succeeded' : 'failed';
-  updateAnalysisStatus(analysisId, status);
-  sink({ type: 'final', analysisId, status });
+  const error = status === 'failed' ? (rows.find((r) => r.status === 'failed')?.provider ?? 'unknown') : null;
+  updateAnalysisStatus(analysisId, status, error ? `Provider ${error} failed` : null);
+  sink({ type: 'final', analysisId, status, error: error ? `Provider ${error} failed` : undefined });
 }
 
 export async function runAnalysis(analysisId: string, username: string, sink: EventSink): Promise<void> {

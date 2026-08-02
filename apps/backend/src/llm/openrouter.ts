@@ -19,7 +19,7 @@ export class OpenRouterProvider implements LLMProvider {
         'HTTP-Referer': 'http://localhost:3000',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'meta-llama/llama-3.1-8b-instruct',
         messages: [
           { role: 'system', content: buildSystemPrompt() },
           { role: 'user', content: buildUserPrompt(ctx.snapshot) },

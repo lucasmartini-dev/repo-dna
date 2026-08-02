@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
 import next from 'next';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
@@ -5,6 +7,8 @@ import { wsHub } from './src/ws/hub';
 import { getAnalysis } from './src/db/analyses';
 import { getProviderRows } from './src/db/providers';
 import { ScorecardSchema } from '@repo/shared';
+
+config({ path: resolve(__dirname, '..', '..', '.env') });
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev, dir: __dirname });

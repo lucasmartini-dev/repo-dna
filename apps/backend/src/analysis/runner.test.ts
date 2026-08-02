@@ -91,6 +91,7 @@ describe('runProviders', () => {
   });
 
   it('marks a failing provider failed without failing others', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     createSession(sessionId, 1_700_000_000_000 + 43_200_000);
     createAnalysis(analysisId, sessionId, username);
     createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
@@ -102,6 +103,8 @@ describe('runProviders', () => {
       (id) => makeProvider(id, id === 'gemini'),
       () => {}
     );
+
+    errorSpy.mockRestore();
 
     const rows = getProviderRows(analysisId);
     expect(rows.find((r) => r.provider === 'gemini')?.status).toBe('failed');

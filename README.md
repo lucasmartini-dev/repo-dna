@@ -82,7 +82,7 @@ Next.js Pages Router API        ┌─ custom HTTP server (server.ts)
       ▼                         │  └─ WebSocketServer @ /ws
 Backend domain ────────────────▶┘
   ├─ github/    fetch profile + repos + languages + activity → GitHubSnapshot
-  ├─ llm/       LLMProvider interface; Gemini/Groq/OpenRouter impls
+  ├─ llm/       LLMProvider interface; Gemini/Groq/OpenRouter/NVCF impls
   ├─ analysis/  runner orchestrates providers in parallel, emits events
   ├─ ws/        hub fans out provider-update/final events to subscribers
   └─ db/        SQLite persistence (sessions, analyses, provider rows)
@@ -124,22 +124,85 @@ Each provider returns a validated scorecard:
 }
 ```
 
-## Prerequisites
+## Getting Started
 
-- Node 20+ (installed via nvm)
-- LLM API keys in a local `.env` file (see below): `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `NVCF_API_KEY` (at least two for a useful report)
-- Optional `GITHUB_TOKEN` to raise GitHub API rate limits
+### 1. Install the recommended Node version
 
-## Run locally
+This project requires **Node 20**. The easiest way to install it is via [nvm](https://github.com/nvm-sh/nvm):
 
 ```bash
+# Install Node 20 (one time)
+nvm install 20
+
+# Use it for this project
 nvm use 20
+```
+
+> The `.nvmrc` file in the repo root pins `20`, so `nvm use` alone works when inside the project.
+> The root `package.json` declares `"engines": { "node": ">=20.0.0" }` and `.npmrc` sets `engine-strict=true`, so `npm install` will fail fast on older Node versions.
+
+### 2. Install dependencies
+
+```bash
 npm install
+```
+
+This installs all workspace dependencies (shared, frontend, backend) and runs the Husky `prepare` hook.
+
+### 3. Configure environment variables
+
+Copy the example file and add at least two LLM API keys. The more providers you enable, the more complete the report.
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set:
+
+- `GEMINI_API_KEY` — Google AI Studio / Gemini API key
+- `GROQ_API_KEY` — Groq API key
+- `OPENROUTER_API_KEY` — OpenRouter API key
+- `NVCF_API_KEY` — NVIDIA NVCF API key
+- `GITHUB_TOKEN` *(optional)* — raises GitHub API rate limits
+
+You can start with any two providers; the backend will analyze the candidate with whichever providers are configured.
+
+### 4. Database
+
+The backend uses **SQLite** via `better-sqlite3`. There is **no separate database server** to install. The database file is created automatically on first run:
+
+- Default path: `apps/backend/.data/app.db`
+- Override with the `DB_PATH` environment variable
+- In Docker, the SQLite file lives on the named `backend-data` volume at `/data/app.db`
+
+### 5. Run tests
+
+Run all suites at once:
+
+```bash
+npm test
+```
+
+Run suites individually:
+
+```bash
+npm run test:shared
+npm run test:backend
+npm run test:frontend
+```
+
+Backend tests use Jest; shared and frontend tests use Vitest.
+
+### 6. Run the project locally
+
+```bash
 npm run dev
 ```
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:3000
+
+The frontend proxies API calls to the backend automatically during development.
 
 ## Run with Docker Compose
 
@@ -151,16 +214,6 @@ docker compose up --build
 - Backend (with SQLite in the `backend-data` volume): http://localhost:3000
 - Stop: `docker compose down`
 - Note: the frontend runs outside Docker; the Docker backend listens on port 3000, which the Vite dev proxy already targets.
-
-## Tests
-
-```bash
-npm run test:shared
-npm run test:backend
-npm run test:frontend
-```
-
-Run all suites with `npm test` (workspace-scoped, so each workspace uses its own runner — Vitest for shared/frontend, Jest for backend).
 
 ## Development Conventions
 

@@ -12,7 +12,7 @@ const sessionId = faker.string.uuid();
 const analysisId = faker.string.uuid();
 const username = faker.internet.userName();
 
-function makeScorecard(provider: 'gemini' | 'groq' | 'openrouter'): Scorecard {
+function makeScorecard(provider: 'gemini' | 'groq' | 'openrouter' | 'nvcf'): Scorecard {
   const dims = ['code_quality', 'languages', 'contribution', 'project_depth', 'oss_experience'].map(
     (key, i) => ({ key, label: key, score: 10 - i }) as Scorecard['dimensions'][number]
   );
@@ -62,12 +62,12 @@ const snapshot: GitHubSnapshot = {
 
 function makeProvider(id: string, fail = false): LLMProvider {
   return {
-    id: id as 'gemini' | 'groq' | 'openrouter',
+    id: id as 'gemini' | 'groq' | 'openrouter' | 'nvcf',
     displayName: id,
     async analyze(ctx) {
       ctx.onProgress(50);
       if (fail) throw new Error('boom');
-      return makeScorecard(id as 'gemini' | 'groq' | 'openrouter');
+      return makeScorecard(id as 'gemini' | 'groq' | 'openrouter' | 'nvcf');
     },
   };
 }
@@ -78,10 +78,12 @@ describe('runProviders', () => {
   it('marks each provider succeeded and emits final', async () => {
     createSession(sessionId, 1_700_000_000_000 + 43_200_000);
     createAnalysis(analysisId, sessionId, username);
-    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter']);
+    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
 
     const events: unknown[] = [];
-    await runProviders(analysisId, snapshot, ['gemini', 'groq', 'openrouter'], makeProvider, (e) => events.push(e));
+    await runProviders(analysisId, snapshot, ['gemini', 'groq', 'openrouter', 'nvcf'], makeProvider, (e) =>
+      events.push(e)
+    );
 
     const rows = getProviderRows(analysisId);
     expect(rows.every((r) => r.status === 'succeeded')).toBe(true);
@@ -91,18 +93,18 @@ describe('runProviders', () => {
   it('marks a failing provider failed without failing others', async () => {
     createSession(sessionId, 1_700_000_000_000 + 43_200_000);
     createAnalysis(analysisId, sessionId, username);
-    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter']);
+    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
 
     await runProviders(
       analysisId,
       snapshot,
-      ['gemini', 'groq', 'openrouter'],
+      ['gemini', 'groq', 'openrouter', 'nvcf'],
       (id) => makeProvider(id, id === 'gemini'),
       () => {}
     );
 
     const rows = getProviderRows(analysisId);
     expect(rows.find((r) => r.provider === 'gemini')?.status).toBe('failed');
-    expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(2);
+    expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(3);
   });
 });

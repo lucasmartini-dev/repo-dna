@@ -1,6 +1,6 @@
 # GitHub Profile Analyzer
 
-Analyze a candidate's GitHub profile with free LLM providers (Gemini, Groq, OpenRouter) and get a recruiter-friendly scorecard report.
+Analyze a candidate's GitHub profile with free LLM providers (Gemini, Groq, OpenRouter, NVIDIA) and get a recruiter-friendly scorecard report.
 
 Built for a tech recruiter screening a candidate's GitHub presence: paste a profile link, confirm the target username, and receive a structured, per-provider scorecard evaluating skills, project depth, contribution activity, and open-source experience — delivered with live progress over WebSocket and resilient to page reloads.
 
@@ -37,7 +37,7 @@ The result: an auditable, plan-first codebase where every feature traces back to
 | Validation | zod (shared scorecard contract) |
 | Container | Docker (multi-stage Ubuntu image) |
 | Quality gates | ESLint (flat config) + Prettier + Commitlint + Husky + lint-staged |
-| Providers | Google Gemini, Groq, OpenRouter (free tiers) |
+| Providers | Google Gemini, Groq, OpenRouter, NVIDIA NVCF (free tiers) |
 
 ## Repository Layout
 
@@ -114,7 +114,7 @@ Each provider returns a validated scorecard:
 
 ```
 {
-  provider: "gemini" | "groq" | "openrouter",
+  provider: "gemini" | "groq" | "openrouter" | "nvcf",
   dimensions: [ { key, label, score: 1-10 } ×5 ],   // code_quality, languages,
                                                      // contribution, project_depth, oss_experience
   top_repos: [ { name, stars, description, reason } ],
@@ -127,7 +127,7 @@ Each provider returns a validated scorecard:
 ## Prerequisites
 
 - Node 20+ (installed via nvm)
-- LLM API keys in a local `.env` file (see below): `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY` (at least two for a useful report)
+- LLM API keys in a local `.env` file (see below): `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `NVCF_API_KEY` (at least two for a useful report)
 - Optional `GITHUB_TOKEN` to raise GitHub API rate limits
 
 ## Run locally

@@ -92,12 +92,18 @@ export async function runAnalysis(analysisId: string, username: string, sink: Ev
       progress: 5,
       lastUpdated: new Date().toISOString(),
     });
-    await runProviders(analysisId, snapshot, ['gemini', 'groq', 'openrouter'], (id) => getProvider(id as never), sink);
+    await runProviders(
+      analysisId,
+      snapshot,
+      ['gemini', 'groq', 'openrouter', 'nvcf'],
+      (id) => getProvider(id as never),
+      sink
+    );
   } catch (err) {
     const msg =
       err instanceof GitHubFetchError ? `GitHub error ${err.status}: ${err.message}` : `Analysis error: ${String(err)}`;
     updateAnalysisStatus(analysisId, 'failed', msg);
-    for (const pid of ['gemini', 'groq', 'openrouter']) {
+    for (const pid of ['gemini', 'groq', 'openrouter', 'nvcf']) {
       updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });
     }
     sink({ type: 'final', analysisId, status: 'failed', error: msg });

@@ -63,7 +63,7 @@ describe('providers', () => {
     createAnalysis(a1, s1, username);
     createProviderRows(a1, PROVIDER_IDS);
     const rows = getProviderRows(a1);
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.every((r) => r.status === 'pending')).toBe(true);
 
     updateProvider(a1, 'gemini', {

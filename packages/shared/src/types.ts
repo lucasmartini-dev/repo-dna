@@ -1,4 +1,4 @@
-export type ProviderId = 'gemini' | 'groq' | 'openrouter';
+export type ProviderId = 'gemini' | 'groq' | 'openrouter' | 'nvcf';
 export type ProviderStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 export type VerdictLeaning = 'hire' | 'no_hire' | 'uncertain';
 export type AnalysisStatus = 'running' | 'succeeded' | 'failed';
@@ -45,7 +45,7 @@ export interface AnalysisSummary {
   providers: Scorecard[];
 }
 
-export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter'] as const;
+export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter', 'nvcf'] as const;
 
 export const DIMENSION_DEFS: Array<{ key: Dimension['key']; label: string }> = [
   { key: 'code_quality', label: 'Code Quality' },

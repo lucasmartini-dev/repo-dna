@@ -65,7 +65,7 @@ describe('retry', () => {
   it('returns 429 inside the 45s cooldown', async () => {
     createSession(sessionId, Date.now() + 43_200_000);
     createAnalysis(analysisId, sessionId, username);
-    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter']);
+    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
     touchProviderAttempt(analysisId, 'gemini', Date.now() - 10_000);
     const { req, res } = createMockReqRes();
     req.body = { sessionId, provider: 'gemini' };

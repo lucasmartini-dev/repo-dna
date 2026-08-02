@@ -1271,7 +1271,7 @@ const profile: GitHubProfile = {
 };
 
 const repos: GitHubRepo[] = [
-  { name: "tslib", description: "TS lib", language: "TypeScript", topics: ["ts"], stargazers_count: 5, forks_count: 1, watchers_count: 5, updated_at: "2026-01-02T00:00:00Z", fork: false },
+  { name: "tslib", description: "TS lib", language: "TypeScript", topics: ["ts"], stargazers_count: 5, forks_count: 1, watchers_count: 5, updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), fork: false },
   { name: "hello", description: null, language: "JavaScript", topics: [], stargazers_count: 3, forks_count: 0, watchers_count: 3, updated_at: "2024-05-01T00:00:00Z", fork: false },
 ];
 

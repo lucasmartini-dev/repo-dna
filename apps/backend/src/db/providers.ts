@@ -1,6 +1,6 @@
 import { getDb, type ProviderRow } from './database';
 
-export function createProviderRows(analysisId: string, providerIds: string[]): void {
+export function createProviderRows(analysisId: string, providerIds: readonly string[]): void {
   const insert = getDb().prepare(
     "INSERT INTO providers (analysis_id, provider, status, progress, last_updated) VALUES (?, ?, 'pending', 0, ?)"
   );

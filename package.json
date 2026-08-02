@@ -1,6 +1,9 @@
 {
   "name": "repo-dna",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "workspaces": ["packages/shared", "apps/frontend", "apps/backend"],
   "scripts": {
     "dev": "npm run dev --workspace=apps/backend & npm run dev --workspace=apps/frontend",

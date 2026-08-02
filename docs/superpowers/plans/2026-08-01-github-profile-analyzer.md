@@ -2598,7 +2598,8 @@ export async function retryHandler(req: NextApiRequest, res: NextApiResponse) {
     );
     const updated = getProviderRow(analysisId, provider);
     sendJson(res, updated?.status === "succeeded" ? 201 : 200, { shared: false, status: updated?.status });
-  } catch {
+  } catch (err) {
+    updateAnalysisStatus(analysisId, "failed", err instanceof Error ? err.message : String(err));
     updateProvider(analysisId, provider, { status: "failed", completedAt: Date.now() });
     sendJson(res, 200, { shared: false, status: "failed" });
   }

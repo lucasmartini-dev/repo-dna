@@ -467,7 +467,7 @@ Expected: FAIL — `Cannot find module '../pages/api/health'`.
   "scripts": {
     "dev": "tsx server.ts",
     "build": "tsc && next build",
-    "start": "node server.js",
+    "start": "tsx server.ts",
     "test": "jest"
   },
   "dependencies": {
@@ -575,12 +575,15 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/backend/package.json ./package.json
 COPY --from=builder /app/apps/backend/node_modules ./node_modules
-COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/.next ./.next
 COPY --from=builder /app/apps/backend/next.config.mjs ./next.config.mjs
+COPY --from=builder /app/apps/backend/server.ts ./server.ts
+COPY --from=builder /app/apps/backend/src ./src
+COPY --from=builder /app/apps/backend/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/packages/shared ./packages/shared
 RUN mkdir -p /data
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+CMD ["npx", "tsx", "server.ts"]
 ```
 
 `docker-compose.yml` (repo root):
@@ -813,7 +816,9 @@ export function createSession(id: string, expiresAt: number): void {
 }
 
 export function getSession(id: string) {
-  return getDb().prepare("SELECT * FROM sessions WHERE id = ?").get(id) as
+  return getDb()
+    .prepare("SELECT id, created_at AS createdAt, expires_at AS expiresAt FROM sessions WHERE id = ?")
+    .get(id) as
     | { id: string; createdAt: number; expiresAt: number }
     | undefined;
 }
@@ -871,7 +876,7 @@ export function updateAnalysisStatus(id: string, status: AnalysisRow["status"], 
 ```ts
 import { getDb, type ProviderRow } from "./database";
 
-export function createProviderRows(analysisId: string, providerIds: string[]): void {
+export function createProviderRows(analysisId: string, providerIds: readonly string[]): void {
   const insert = getDb().prepare(
     "INSERT INTO providers (analysis_id, provider, status, progress, last_updated) VALUES (?, ?, 'pending', 0, ?)"
   );
@@ -1024,7 +1029,7 @@ git commit -m "feat: add github profile url validation"
 
 **Interfaces:**
 - Consumes: `parseGithubUrl` from Task 4 (used later).
-- Produces: runnable frontend with Pinia store `useSessionStore` exposing `sessionId: string | null`, `ensureSession(): Promise<string>`, `resetSession(): void` (writes/reads localStorage key `github-analyzer.session`).
+- Produces: runnable frontend with Pinia store `useSessionStore` exposing `sessionId: string | null`, `ensureSession(): string` (synchronous; `crypto.randomUUID()` is sync and all later tasks call it without await), `resetSession(): void` (writes/reads localStorage key `github-analyzer.session`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1074,6 +1079,7 @@ Expected: FAIL — module not found.
   "name": "@repo/frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
@@ -1268,7 +1274,7 @@ const profile: GitHubProfile = {
 };
 
 const repos: GitHubRepo[] = [
-  { name: "tslib", description: "TS lib", language: "TypeScript", topics: ["ts"], stargazers_count: 5, forks_count: 1, watchers_count: 5, updated_at: "2026-01-02T00:00:00Z", fork: false },
+  { name: "tslib", description: "TS lib", language: "TypeScript", topics: ["ts"], stargazers_count: 5, forks_count: 1, watchers_count: 5, updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), fork: false },
   { name: "hello", description: null, language: "JavaScript", topics: [], stargazers_count: 3, forks_count: 0, watchers_count: 3, updated_at: "2024-05-01T00:00:00Z", fork: false },
 ];
 
@@ -1398,7 +1404,7 @@ export function buildSnapshot(profile: GitHubProfile, repos: GitHubRepo[]): GitH
 
   const recentWindow = Date.now() - 90 * 24 * 60 * 60 * 1000;
   const recentCommits = repos.filter((r) => new Date(r.updated_at).getTime() >= recentWindow).length;
-  const lastPush = repos.length ? repos.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0].updated_at : null;
+  const lastPush = repos.length ? [...repos].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0].updated_at : null;
 
   return {
     profile: {
@@ -1696,9 +1702,9 @@ export class GeminiProvider implements LLMProvider {
     ctx.onProgress(20);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is not set");
-    const res = await fetch(`${API}?key=${key}`, {
+    const res = await fetch(API, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
         contents: [{ parts: [{ text: buildUserPrompt(ctx.snapshot) }] }],
@@ -2079,9 +2085,8 @@ git commit -m "feat: add analysis runner with provider orchestration"
 **Interfaces:**
 - Consumes: `AnalysisEvent` (Task 9).
 - Produces:
-  - `wsHub` singleton in `src/ws/hub.ts`: `subscribe(analysisId: string, ws: WebSocket): () => void`, `publish(analysisId: string, event: AnalysisEvent): void`, `setRunningChecker(fn: (analysisId: string) => boolean): void`.
-  - `server.ts` — custom HTTP server that mounts Next.js and a `WebSocketServer` at path `/ws`, using `wsHub`.
-  - Exported `createWssHandler(getAnalysisById)` helper in `src/ws/hub.ts` for testability: on connection, looks up the analysis; if not `running`, closes immediately.
+  - `wsHub` singleton in `src/ws/hub.ts`: `subscribe(analysisId: string, ws: WebSocket): () => void`, `publish(analysisId: string, event: AnalysisEvent): void`, `setRunningChecker(fn: (analysisId: string) => boolean): void`, `canSubscribe(analysisId: string): boolean`.
+  - `server.ts` — custom HTTP server that mounts Next.js and a `WebSocketServer` at path `/ws`, using `wsHub`; on upgrade it requires `sessionId` (else destroys the socket), looks up `analysisId`, gates via `wsHub.canSubscribe` (running-checker queries `getAnalysis(...)?.status === 'running'`), then subscribes and pushes an initial `{ type: 'state', ... }` snapshot. Connection gating is inline via `canSubscribe` (a separate `createWssHandler` helper is NOT created — the provided code implements gating inline). The socket is additionally bound to its session: the upgrade handler verifies `getAnalysis(analysisId)?.sessionId === sessionId` so a client can only subscribe to an analysis belonging to its own session.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2176,7 +2181,6 @@ import { WebSocketServer, WebSocket } from "ws";
 import { wsHub } from "./src/ws/hub";
 import { getAnalysis } from "./src/db/analyses";
 import { getProviderRows } from "./src/db/providers";
-import { ScorecardSchema } from "@repo/shared";
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev, dir: __dirname });
@@ -2201,7 +2205,8 @@ app.prepare().then(() => {
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
       const analysisId = url.searchParams.get("analysisId");
-      if (!analysisId || !wsHub.canSubscribe(analysisId)) {
+      const analysis = analysisId ? getAnalysis(analysisId) : undefined;
+      if (!analysisId || analysis?.sessionId !== sessionId || !wsHub.canSubscribe(analysisId)) {
         ws.close(4001, "no running analysis");
         return;
       }
@@ -2593,7 +2598,8 @@ export async function retryHandler(req: NextApiRequest, res: NextApiResponse) {
     );
     const updated = getProviderRow(analysisId, provider);
     sendJson(res, updated?.status === "succeeded" ? 201 : 200, { shared: false, status: updated?.status });
-  } catch {
+  } catch (err) {
+    updateAnalysisStatus(analysisId, "failed", err instanceof Error ? err.message : String(err));
     updateProvider(analysisId, provider, { status: "failed", completedAt: Date.now() });
     sendJson(res, 200, { shared: false, status: "failed" });
   }
@@ -2797,7 +2803,7 @@ git commit -m "feat: add frontend api client"
 - Consumes: `fetchLatestAnalysis`, `fetchAnalysis`, `retryProvider` (Task 12), `useSessionStore` (Task 5).
 - Produces:
   - `connectAnalysisWs(analysisId: string, sessionId: string, handlers): () => void` in `src/api/ws.ts` — opens `ws://<host>/ws?sessionId=&analysisId=`, returns a close function; auto-reconnect only while the caller's `shouldReconnect` returns true.
-  - Pinia `useAnalysisStore` exposing: `analysis`, `username`, `loading`, `shared`, `banner`, `start(username)`, `restore()`, `loadAnalysis(id)`, `retry(provider)`, `onWsEvent(event)`, `cooldown(provider)`.
+  - Pinia `useAnalysisStore` exposing: `analysis`, `analysisId`, `username`, `loading`, `shared`, `banner`, `start(username)`, `restore()`, `loadAnalysis(id)`, `retry(provider)`, `onWsEvent(event)`, `cooldown(provider)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3650,7 +3656,7 @@ git commit -m "feat: add report view with scorecard tabs"
 ### Task 17: End-to-End Wiring, README + Final Verification
 
 **Files:**
-- Create: `README.md`
+- Review/refine: `README.md` — ALREADY CREATED ahead of time (commit `6fcde6d` "docs: add project readme with goals, ai-driven workflow and architecture"); this task verifies it is accurate and completes any remaining sections rather than recreating it from scratch.
 - Create: `.env.example`
 - Create: `docker-compose.yml`
 - Modify: root `package.json` scripts (add `docker:up` / `docker:down`)
@@ -3696,7 +3702,7 @@ volumes:
   backend-data:
 ```
 
-`README.md`:
+`README.md` (already created ahead of time at commit `6fcde6d` — verify/refine it; the minimal template below is superseded by that fuller README):
 ```markdown
 # GitHub Profile Analyzer
 

@@ -1,5 +1,5 @@
 import type { NextApiResponse } from 'next';
-import { getSession, createSession } from '../db/sessions';
+import { getSession, upsertSession } from '../db/sessions';
 
 export function sendJson(res: NextApiResponse, status: number, payload: unknown): void {
   res.status(status).json(payload);
@@ -8,7 +8,7 @@ export function sendJson(res: NextApiResponse, status: number, payload: unknown)
 export function requireSession(sessionId: string): string | null {
   let session = getSession(sessionId);
   if (!session || session.expiresAt < Date.now()) {
-    createSession(sessionId, Date.now() + 12 * 60 * 60 * 1000);
+    upsertSession(sessionId, Date.now() + 12 * 60 * 60 * 1000);
     session = getSession(sessionId);
   }
   return session?.id ?? null;

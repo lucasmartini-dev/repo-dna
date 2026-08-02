@@ -4,6 +4,12 @@ export function createSession(id: string, expiresAt: number): void {
   getDb().prepare('INSERT INTO sessions (id, created_at, expires_at) VALUES (?, ?, ?)').run(id, Date.now(), expiresAt);
 }
 
+export function upsertSession(id: string, expiresAt: number): void {
+  getDb()
+    .prepare('INSERT OR REPLACE INTO sessions (id, created_at, expires_at) VALUES (?, ?, ?)')
+    .run(id, Date.now(), expiresAt);
+}
+
 export function getSession(id: string) {
   return getDb()
     .prepare('SELECT id, created_at AS createdAt, expires_at AS expiresAt FROM sessions WHERE id = ?')

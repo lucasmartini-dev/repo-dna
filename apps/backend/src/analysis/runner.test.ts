@@ -6,6 +6,7 @@ import type { Scorecard } from '@repo/shared';
 import { createSession } from '../db/sessions';
 import { createAnalysis } from '../db/analyses';
 import { createProviderRows, getProviderRows } from '../db/providers';
+import { getAnalysis } from '../db/analyses';
 import { resetDbForTests } from '../db/database';
 
 const sessionId = faker.string.uuid();
@@ -90,8 +91,8 @@ describe('runProviders', () => {
     expect(events.some((e) => (e as { type: string }).type === 'final')).toBe(true);
   });
 
-  it('marks a failing provider failed without failing others', async () => {
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  it('marks a failing provider failed without failing others and logs the error', async () => {
+    const errorSpy = jest.spyOn(global.console, 'error').mockImplementation(() => {});
     createSession(sessionId, 1_700_000_000_000 + 43_200_000);
     createAnalysis(analysisId, sessionId, username);
     createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
@@ -104,10 +105,14 @@ describe('runProviders', () => {
       () => {}
     );
 
-    errorSpy.mockRestore();
-
     const rows = getProviderRows(analysisId);
     expect(rows.find((r) => r.provider === 'gemini')?.status).toBe('failed');
     expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(3);
+
+    const analysis = getAnalysis(analysisId);
+    expect(analysis?.status).toBe('failed');
+    expect(analysis?.error).toContain('gemini');
+
+    errorSpy.mockRestore();
   });
 });

@@ -29,7 +29,8 @@ app.prepare().then(() => {
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
       const analysisId = url.searchParams.get('analysisId');
-      if (!analysisId || !wsHub.canSubscribe(analysisId)) {
+      const analysis = analysisId ? getAnalysis(analysisId) : undefined;
+      if (!analysisId || analysis?.sessionId !== sessionId || !wsHub.canSubscribe(analysisId)) {
         ws.close(4001, 'no running analysis');
         return;
       }

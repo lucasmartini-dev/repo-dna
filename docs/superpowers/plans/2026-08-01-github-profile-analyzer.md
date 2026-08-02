@@ -2086,7 +2086,7 @@ git commit -m "feat: add analysis runner with provider orchestration"
 - Consumes: `AnalysisEvent` (Task 9).
 - Produces:
   - `wsHub` singleton in `src/ws/hub.ts`: `subscribe(analysisId: string, ws: WebSocket): () => void`, `publish(analysisId: string, event: AnalysisEvent): void`, `setRunningChecker(fn: (analysisId: string) => boolean): void`, `canSubscribe(analysisId: string): boolean`.
-  - `server.ts` — custom HTTP server that mounts Next.js and a `WebSocketServer` at path `/ws`, using `wsHub`; on upgrade it requires `sessionId`, gates via `wsHub.canSubscribe` (running-checker queries `getAnalysis(...)?.status === 'running'`), then subscribes and pushes an initial `{ type: 'state', ... }` snapshot. Connection gating is inline via `canSubscribe` (a separate `createWssHandler` helper is NOT created — the provided code implements gating inline).
+  - `server.ts` — custom HTTP server that mounts Next.js and a `WebSocketServer` at path `/ws`, using `wsHub`; on upgrade it requires `sessionId` (else destroys the socket), looks up `analysisId`, gates via `wsHub.canSubscribe` (running-checker queries `getAnalysis(...)?.status === 'running'`), then subscribes and pushes an initial `{ type: 'state', ... }` snapshot. Connection gating is inline via `canSubscribe` (a separate `createWssHandler` helper is NOT created — the provided code implements gating inline). The socket is additionally bound to its session: the upgrade handler verifies `getAnalysis(analysisId)?.sessionId === sessionId` so a client can only subscribe to an analysis belonging to its own session.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2205,7 +2205,8 @@ app.prepare().then(() => {
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
       const analysisId = url.searchParams.get("analysisId");
-      if (!analysisId || !wsHub.canSubscribe(analysisId)) {
+      const analysis = analysisId ? getAnalysis(analysisId) : undefined;
+      if (!analysisId || analysis?.sessionId !== sessionId || !wsHub.canSubscribe(analysisId)) {
         ws.close(4001, "no running analysis");
         return;
       }

@@ -11,9 +11,9 @@ export class GeminiProvider implements LLMProvider {
     ctx.onProgress(20);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error('GEMINI_API_KEY is not set');
-    const res = await fetch(`${API}?key=${key}`, {
+    const res = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
         contents: [{ parts: [{ text: buildUserPrompt(ctx.snapshot) }] }],

@@ -1,0 +1,31 @@
+import type { AnalyzeContext, LLMProvider } from './provider';
+import { buildSystemPrompt, buildUserPrompt } from './prompts';
+import { parseScorecardJson } from './json';
+
+const API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+export class GeminiProvider implements LLMProvider {
+  id = 'gemini' as const;
+  displayName = 'Gemini';
+  async analyze(ctx: AnalyzeContext): Promise<ReturnType<typeof parseScorecardJson>> {
+    ctx.onProgress(20);
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) throw new Error('GEMINI_API_KEY is not set');
+    const res = await fetch(`${API}?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+        contents: [{ parts: [{ text: buildUserPrompt(ctx.snapshot) }] }],
+      }),
+    });
+    if (!res.ok) throw new Error(`Gemini API ${res.status}`);
+    ctx.onProgress(70);
+    const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    if (!text) throw new Error('Gemini returned empty response');
+    const scorecard = parseScorecardJson(text, this.id);
+    ctx.onProgress(100);
+    return scorecard;
+  }
+}

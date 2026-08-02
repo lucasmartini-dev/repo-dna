@@ -1026,7 +1026,7 @@ git commit -m "feat: add github profile url validation"
 
 **Interfaces:**
 - Consumes: `parseGithubUrl` from Task 4 (used later).
-- Produces: runnable frontend with Pinia store `useSessionStore` exposing `sessionId: string | null`, `ensureSession(): Promise<string>`, `resetSession(): void` (writes/reads localStorage key `github-analyzer.session`).
+- Produces: runnable frontend with Pinia store `useSessionStore` exposing `sessionId: string | null`, `ensureSession(): string` (synchronous; `crypto.randomUUID()` is sync and all later tasks call it without await), `resetSession(): void` (writes/reads localStorage key `github-analyzer.session`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1076,6 +1076,7 @@ Expected: FAIL — module not found.
   "name": "@repo/frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",

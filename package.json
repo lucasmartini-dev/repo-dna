@@ -5,6 +5,11 @@
   "scripts": {
     "dev": "npm run dev --workspace=apps/backend & npm run dev --workspace=apps/frontend",
     "test": "npm run test --workspaces --if-present",
+    "test:backend": "npm run test --workspace=apps/backend",
+    "test:frontend": "npm run test --workspace=apps/frontend",
+    "test:shared": "npm run test --workspace=packages/shared",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

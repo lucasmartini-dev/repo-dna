@@ -33,12 +33,12 @@ describe('session', () => {
 });
 
 describe('analyze', () => {
-  it('returns 401 for unknown session', async () => {
+  it('creates session and starts analysis for unknown session', async () => {
     const { req, res } = createMockReqRes();
     req.body = { username };
     req.headers = { 'x-session-id': 'nope' };
     await analyzeHandler(req, res);
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(201);
   });
 
   it('returns 201 for a new analysis', async () => {

@@ -27,6 +27,7 @@ export interface ProviderRow {
   completedAt: number | null;
   lastAttemptAt: number | null;
   scorecard: string | null;
+  model: string | null;
 }
 
 let db: Database.Database | null = null;
@@ -69,6 +70,10 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_analyses_session ON analyses(session_id);
     CREATE INDEX IF NOT EXISTS idx_analyses_username ON analyses(username);
   `);
+  const columns = db.pragma('table_info(providers)') as Array<{ name: string }>;
+  if (!columns.some((c) => c.name === 'model')) {
+    db.exec('ALTER TABLE providers ADD COLUMN model TEXT');
+  }
   return db;
 }
 

@@ -15,6 +15,7 @@ export function toAnalysisSummary(analysis: AnalysisRow, rows: ProviderRow[]): A
         try {
           return ScorecardSchema.parse({
             ...JSON.parse(r.scorecard),
+            model: r.model,
             status: r.status,
             progress: r.progress,
             lastUpdated: new Date(r.lastUpdated).toISOString(),
@@ -25,6 +26,7 @@ export function toAnalysisSummary(analysis: AnalysisRow, rows: ProviderRow[]): A
       }
       return {
         provider: r.provider as never,
+        model: r.model,
         status: r.status,
         progress: r.progress,
         startedAt: r.startedAt ? new Date(r.startedAt).toISOString() : null,

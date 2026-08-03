@@ -59,6 +59,7 @@ function buildStateSnapshot(analysisId: string) {
     const scorecard = row.scorecard ? JSON.parse(row.scorecard) : null;
     return {
       provider: row.provider,
+      model: row.model,
       status: row.status,
       progress: row.progress,
       lastUpdated: new Date(row.lastUpdated).toISOString(),

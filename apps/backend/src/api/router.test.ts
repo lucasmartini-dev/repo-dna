@@ -25,7 +25,7 @@ describe('startAnalysisAsync', () => {
     const received: unknown[] = [];
     const ws = { readyState: 1, send: (m: string) => received.push(JSON.parse(m)) } as unknown as WebSocket;
     wsHub.subscribe('a1', ws);
-    startAnalysisAsync('a1', 'test', { gemini: 'g1', groq: 'g2', openrouter: 'g3', nvcf: 'g4', opencode: 'g5' });
+    startAnalysisAsync('a1', 'test', { gemini: 'g1', groq: 'g2', openrouter: 'g3', nvcf: 'g4' });
     expect(runAnalysis).toHaveBeenCalledWith('a1', 'test', expect.any(Object), expect.any(Function));
     expect(received).toHaveLength(1);
     expect((received[0] as { progress: number }).progress).toBe(50);

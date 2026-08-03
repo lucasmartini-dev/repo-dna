@@ -128,7 +128,7 @@ export async function runAnalysis(
     await runProviders(
       analysisId,
       snapshot,
-      ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+      ['gemini', 'groq', 'openrouter', 'nvcf'],
       models,
       (id) => getProvider(id as never),
       sink
@@ -143,7 +143,7 @@ export async function runAnalysis(
       msg = `Analysis error: ${String(err)}`;
     }
     updateAnalysisStatus(analysisId, 'failed', msg);
-    for (const pid of ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode']) {
+    for (const pid of ['gemini', 'groq', 'openrouter', 'nvcf']) {
       updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });
     }
     sink({ type: 'final', analysisId, status: 'failed', error: msg });

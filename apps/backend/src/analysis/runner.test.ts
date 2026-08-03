@@ -89,25 +89,23 @@ describe('runProviders', () => {
     try {
       createSession(sessionId, 1_700_000_000_000 + 43_200_000);
       createAnalysis(analysisId, sessionId, username);
-      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf'], {
         gemini: 'gemini-2.0-flash',
         groq: 'llama-3.1-8b-instant',
-        openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+        openrouter: 'google/gemma-4-31b-it:free',
         nvcf: 'meta/llama-3.1-8b-instruct',
-        opencode: 'deepseek-v4-flash',
       });
 
       const events: unknown[] = [];
       const promise = runProviders(
         analysisId,
         snapshot,
-        ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+        ['gemini', 'groq', 'openrouter', 'nvcf'],
         {
           gemini: 'gemini-2.0-flash',
           groq: 'llama-3.1-8b-instant',
-          openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+          openrouter: 'google/gemma-4-31b-it:free',
           nvcf: 'meta/llama-3.1-8b-instruct',
-          opencode: 'deepseek-v4-flash',
         },
         makeProvider,
         (e) => events.push(e)
@@ -130,24 +128,22 @@ describe('runProviders', () => {
       const errorSpy = jest.spyOn(global.console, 'error').mockImplementation(() => {});
       createSession(sessionId, 1_700_000_000_000 + 43_200_000);
       createAnalysis(analysisId, sessionId, username);
-      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf'], {
         gemini: 'gemini-2.0-flash',
         groq: 'llama-3.1-8b-instant',
-        openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+        openrouter: 'google/gemma-4-31b-it:free',
         nvcf: 'meta/llama-3.1-8b-instruct',
-        opencode: 'deepseek-v4-flash',
       });
 
       const promise = runProviders(
         analysisId,
         snapshot,
-        ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+        ['gemini', 'groq', 'openrouter', 'nvcf'],
         {
           gemini: 'gemini-2.0-flash',
           groq: 'llama-3.1-8b-instant',
-          openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+          openrouter: 'google/gemma-4-31b-it:free',
           nvcf: 'meta/llama-3.1-8b-instruct',
-          opencode: 'deepseek-v4-flash',
         },
         (id) => makeProvider(id, id === 'gemini'),
         () => {}
@@ -158,7 +154,7 @@ describe('runProviders', () => {
 
       const rows = getProviderRows(analysisId);
       expect(rows.find((r) => r.provider === 'gemini')?.status).toBe('failed');
-      expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(4);
+      expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(3);
 
       const analysis = getAnalysis(analysisId);
       expect(analysis?.status).toBe('failed');
@@ -175,25 +171,23 @@ describe('runProviders', () => {
     try {
       createSession(sessionId, 1_700_000_000_000 + 43_200_000);
       createAnalysis(analysisId, sessionId, username);
-      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf'], {
         gemini: 'g1',
         groq: 'g2',
         openrouter: 'g3',
         nvcf: 'g4',
-        opencode: 'g5',
       });
 
       const events: unknown[] = [];
       const promise = runProviders(
         analysisId,
         snapshot,
-        ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+        ['gemini', 'groq', 'openrouter', 'nvcf'],
         {
           gemini: 'g1',
           groq: 'g2',
           openrouter: 'g3',
           nvcf: 'g4',
-          opencode: 'g5',
         },
         makeProvider,
         (e) => events.push(e)
@@ -223,12 +217,11 @@ describe('runAnalysis', () => {
     mockMod.fetchGitHubData.mockRejectedValueOnce(new GitHubTimeoutError('timed out'));
     createSession(sessionId, 1_700_000_000_000 + 43_200_000);
     createAnalysis(analysisId, sessionId, username);
-    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf'], {
       gemini: 'g1',
       groq: 'g2',
       openrouter: 'g3',
       nvcf: 'g4',
-      opencode: 'g5',
     });
     const events: unknown[] = [];
     await runAnalysis(

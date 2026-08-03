@@ -1,4 +1,4 @@
-export type ProviderId = 'gemini' | 'groq' | 'openrouter' | 'nvcf' | 'opencode';
+export type ProviderId = 'gemini' | 'groq' | 'openrouter' | 'nvcf';
 export type ProviderStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 export type VerdictLeaning = 'hire' | 'no_hire' | 'uncertain';
 export type AnalysisStatus = 'running' | 'succeeded' | 'failed';
@@ -16,11 +16,10 @@ export const PROVIDER_MODELS: Record<ProviderId, ModelOption[]> = {
   ],
   groq: [{ id: 'llama-3.1-8b-instant', displayName: 'Llama 3.1 8B Instant', free: false }],
   openrouter: [
-    { id: 'meta-llama/llama-3.1-8b-instruct:free', displayName: 'Llama 3.1 8B (free)', free: true },
+    { id: 'google/gemma-4-31b-it:free', displayName: 'Gemma 4 31B (free)', free: true },
     { id: 'google/gemini-2.0-flash-001:free', displayName: 'Gemini 2.0 Flash (free)', free: true },
   ],
   nvcf: [{ id: 'meta/llama-3.1-8b-instruct', displayName: 'Llama 3.1 8B Instruct', free: false }],
-  opencode: [{ id: 'deepseek-v4-flash', displayName: 'DeepSeek V4 Flash (free)', free: true }],
 };
 
 export interface Dimension {
@@ -66,7 +65,7 @@ export interface AnalysisSummary {
   providers: Scorecard[];
 }
 
-export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'] as const;
+export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter', 'nvcf'] as const;
 
 export const DIMENSION_DEFS: Array<{ key: Dimension['key']; label: string }> = [
   { key: 'code_quality', label: 'Code Quality' },

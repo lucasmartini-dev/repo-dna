@@ -64,12 +64,11 @@ describe('providers', () => {
     createProviderRows(a1, PROVIDER_IDS as unknown as string[], {
       gemini: 'gemini-2.0-flash',
       groq: 'llama-3.1-8b-instant',
-      openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+      openrouter: 'google/gemma-4-31b-it:free',
       nvcf: 'meta/llama-3.1-8b-instruct',
-      opencode: 'deepseek-v4-flash',
     });
     const rows = getProviderRows(a1);
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(4);
     expect(rows[0].model).toBe('gemini-2.0-flash');
     expect(rows.every((r) => r.status === 'pending')).toBe(true);
 

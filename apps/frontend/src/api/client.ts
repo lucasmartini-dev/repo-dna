@@ -1,4 +1,4 @@
-import type { AnalysisSummary, Scorecard } from '@repo/shared';
+import type { AnalysisSummary, RepoScorecard, Scorecard } from '@repo/shared';
 
 export class ApiError extends Error {
   constructor(
@@ -86,4 +86,31 @@ export async function retryProvider(
     body: JSON.stringify({ sessionId, provider, model }),
   });
   return { ...body, status };
+}
+
+export async function startRepoAnalysis(
+  analysisId: string,
+  repo: string,
+  description: string | null,
+  language: string | null,
+  stars: number,
+  topics: string[],
+  provider: string,
+  model: string
+): Promise<{ status: string }> {
+  const { status, body } = await request<{ status: string }>(`/api/analysis/${analysisId}/repo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo, provider, model, description, language, stars, topics }),
+  });
+  if (status !== 200) throw new ApiError('failed to start repo analysis', status);
+  return body;
+}
+
+export async function fetchRepoAnalysis(analysisId: string, repo: string): Promise<RepoScorecard | null> {
+  const { status, body } = await request<{ repoAnalysis: RepoScorecard | null }>(
+    `/api/analysis/${analysisId}/repo?repo=${encodeURIComponent(repo)}`
+  );
+  if (status !== 200) return null;
+  return body?.repoAnalysis ?? null;
 }

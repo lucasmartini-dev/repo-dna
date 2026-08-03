@@ -22,6 +22,7 @@ const scorecard: Scorecard = {
     { key: 'contribution', label: 'Contribution Activity', score: 6 },
     { key: 'project_depth', label: 'Project Depth', score: 9 },
     { key: 'oss_experience', label: 'Open Source Experience', score: 7 },
+    { key: 'seniority', label: 'Seniority Level', score: 5 },
   ],
   top_repos: [
     {

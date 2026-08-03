@@ -7,6 +7,7 @@ const minimalScorecard = {
     { key: 'contribution', label: 'Contribution', score: 5 },
     { key: 'project_depth', label: 'Project Depth', score: 5 },
     { key: 'oss_experience', label: 'Open Source Experience', score: 5 },
+    { key: 'seniority', label: 'Seniority Level', score: 5 },
   ],
   top_repos: [{ name: 'repo', stars: 1, description: 'desc', reason: 'reason' }],
   strengths: ['strength'],
@@ -33,7 +34,7 @@ describe('parseScorecardJson', () => {
     expect(result.startedAt).toBeNull();
     expect(result.completedAt).not.toBeNull();
     expect(result.lastUpdated).not.toBeNull();
-    expect(result.dimensions).toHaveLength(5);
+    expect(result.dimensions).toHaveLength(6);
   });
 
   it('overwrites provider/status/progress from parsed json', () => {

@@ -20,7 +20,7 @@ const analysisId = faker.string.uuid();
 const username = faker.internet.userName();
 
 function makeScorecard(provider: ProviderId): Scorecard {
-  const dims = ['code_quality', 'languages', 'contribution', 'project_depth', 'oss_experience'].map(
+  const dims = ['code_quality', 'languages', 'contribution', 'project_depth', 'oss_experience', 'seniority'].map(
     (key, i) => ({ key, label: key, score: 10 - i }) as Scorecard['dimensions'][number]
   );
   return {

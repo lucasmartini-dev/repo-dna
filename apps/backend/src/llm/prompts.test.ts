@@ -1,4 +1,14 @@
 import { extractJson, parseScorecardJson } from './json';
+import { buildSystemPrompt } from './prompts';
+
+describe('buildSystemPrompt', () => {
+  it('includes seniority dimension with 1-3=Junior scale hint', () => {
+    const prompt = buildSystemPrompt();
+    expect(prompt).toContain('seniority');
+    expect(prompt).toContain('Seniority Level');
+    expect(prompt).toContain('1-3=Junior');
+  });
+});
 
 describe('extractJson', () => {
   it('strips markdown fences', () => {
@@ -22,6 +32,7 @@ describe('parseScorecardJson', () => {
         { key: 'contribution', label: 'Contribution Activity', score: 6 },
         { key: 'project_depth', label: 'Project Depth', score: 9 },
         { key: 'oss_experience', label: 'Open Source Experience', score: 7 },
+        { key: 'seniority', label: 'Seniority Level', score: 5 },
       ],
       top_repos: [],
       strengths: ['x'],
@@ -30,7 +41,7 @@ describe('parseScorecardJson', () => {
     });
     const scorecard = parseScorecardJson(raw, 'gemini');
     expect(scorecard.provider).toBe('gemini');
-    expect(scorecard.dimensions).toHaveLength(5);
+    expect(scorecard.dimensions).toHaveLength(6);
   });
 
   it('throws on invalid input', () => {

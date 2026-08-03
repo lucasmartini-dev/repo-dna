@@ -34,6 +34,30 @@ export const ScorecardSchema = z.object({
   verdict: VerdictSchema,
 });
 
+export const RepoDimensionSchema = z.object({
+  key: z.enum(['code_quality', 'documentation', 'workflow', 'collaboration', 'activity']),
+  label: z.string(),
+  score: z.number().int().min(1).max(10),
+});
+
+export const RepoScorecardSchema = z.object({
+  id: z.string(),
+  repoName: z.string(),
+  provider: z.enum(PROVIDER_IDS),
+  model: z.string().nullable().default(null),
+  status: z.enum(['pending', 'running', 'succeeded', 'failed']),
+  error: z.string().nullable(),
+  dimensions: z.array(RepoDimensionSchema).length(5),
+  strengths: z.array(z.string()),
+  gaps: z.array(z.string()),
+  verdict: z.object({
+    leaning: z.enum(['strong', 'moderate', 'weak']),
+    summary: z.string(),
+  }),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+});
+
 export const AnalysisSummarySchema = z.object({
   id: z.string(),
   sessionId: z.string(),

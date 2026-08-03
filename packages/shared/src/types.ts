@@ -67,6 +67,23 @@ export interface AnalysisSummary {
 
 export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter', 'nvcf'] as const;
 
+export type RepoDimensionKey = 'code_quality' | 'documentation' | 'workflow' | 'collaboration' | 'activity';
+
+export interface RepoScorecard {
+  id: string;
+  repoName: string;
+  provider: ProviderId;
+  model: string | null;
+  status: ProviderStatus;
+  error: string | null;
+  dimensions: { key: RepoDimensionKey; label: string; score: number }[];
+  strengths: string[];
+  gaps: string[];
+  verdict: { leaning: 'strong' | 'moderate' | 'weak'; summary: string };
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 export const DIMENSION_DEFS: Array<{ key: Dimension['key']; label: string }> = [
   { key: 'code_quality', label: 'Code Quality' },
   { key: 'languages', label: 'Languages' },

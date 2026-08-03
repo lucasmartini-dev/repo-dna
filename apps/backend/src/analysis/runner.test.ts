@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { runProviders } from './runner';
+import { runProviders, runAnalysis } from './runner';
 import type { GitHubSnapshot } from '../github/types';
 import type { LLMProvider } from '../llm/provider';
 import type { Scorecard, ProviderId } from '@repo/shared';
@@ -8,6 +8,12 @@ import { createAnalysis } from '../db/analyses';
 import { createProviderRows, getProviderRows } from '../db/providers';
 import { getAnalysis } from '../db/analyses';
 import { resetDbForTests } from '../db/database';
+import { GitHubTimeoutError } from '../github/client';
+
+jest.mock('../github/client', () => {
+  const actual = jest.requireActual('../github/client');
+  return { ...actual, fetchGitHubData: jest.fn(actual.fetchGitHubData) };
+});
 
 const sessionId = faker.string.uuid();
 const analysisId = faker.string.uuid();
@@ -208,5 +214,33 @@ describe('runProviders', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('runAnalysis', () => {
+  it('handles GitHubTimeoutError and emits final with error message', async () => {
+    const mockMod = jest.requireMock('../github/client') as { fetchGitHubData: jest.Mock };
+    mockMod.fetchGitHubData.mockRejectedValueOnce(new GitHubTimeoutError('timed out'));
+    createSession(sessionId, 1_700_000_000_000 + 43_200_000);
+    createAnalysis(analysisId, sessionId, username);
+    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+      gemini: 'g1',
+      groq: 'g2',
+      openrouter: 'g3',
+      nvcf: 'g4',
+      opencode: 'g5',
+    });
+    const events: unknown[] = [];
+    await runAnalysis(
+      analysisId,
+      username,
+      { gemini: 'g1', groq: 'g2', openrouter: 'g3', nvcf: 'g4', opencode: 'g5' },
+      (e) => events.push(e)
+    );
+    const final = events.find((e) => (e as { type: string }).type === 'final') as { error: string } | undefined;
+    expect(final).toBeDefined();
+    expect(final?.error).toContain('timed out');
+    const analysis = getAnalysis(analysisId);
+    expect(analysis?.status).toBe('failed');
   });
 });

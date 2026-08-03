@@ -29,7 +29,6 @@ class WsHub {
     if (!set) return;
     const payload = JSON.stringify(event);
     for (const ws of set) {
-      // WebSocket.OPEN === 1; also tolerate mocks without readyState
       if (ws.readyState === undefined || ws.readyState === 1) ws.send(payload);
     }
   }
@@ -39,4 +38,6 @@ class WsHub {
   }
 }
 
-export const wsHub = new WsHub();
+const globalKey = Symbol.for('repo-dna.wsHub');
+const g = globalThis as Record<symbol, WsHub>;
+export const wsHub: WsHub = g[globalKey] ?? (g[globalKey] = new WsHub());

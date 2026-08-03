@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { buildSnapshot } from './client';
+import { buildSnapshot, GitHubTimeoutError } from './client';
 import type { GitHubProfile, GitHubRepo } from './types';
 
 const username = faker.internet.userName();
@@ -57,5 +57,14 @@ describe('buildSnapshot', () => {
     expect(snapshot.repos[0].stars).toBe(5);
     expect(snapshot.activity.repoCount).toBe(2);
     expect(snapshot.activity.recentCommits).toBe(1);
+  });
+});
+
+describe('GitHubTimeoutError', () => {
+  it('has correct name and message', () => {
+    const err = new GitHubTimeoutError('timed out');
+    expect(err.name).toBe('GitHubTimeoutError');
+    expect(err.message).toBe('timed out');
+    expect(err).toBeInstanceOf(Error);
   });
 });

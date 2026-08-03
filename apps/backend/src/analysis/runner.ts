@@ -2,6 +2,7 @@ import { getProviderRows, updateProvider, touchProviderAttempt } from '../db/pro
 import { updateAnalysisStatus } from '../db/analyses';
 import { fetchGitHubData } from '../github/client';
 import { GitHubFetchError } from '../github/types';
+import { GitHubTimeoutError } from '../github/client';
 import type { GitHubSnapshot } from '../github/types';
 import type { LLMProvider } from '../llm/provider';
 import { getProvider } from '../llm';
@@ -133,8 +134,14 @@ export async function runAnalysis(
       sink
     );
   } catch (err) {
-    const msg =
-      err instanceof GitHubFetchError ? `GitHub error ${err.status}: ${err.message}` : `Analysis error: ${String(err)}`;
+    let msg: string;
+    if (err instanceof GitHubFetchError) {
+      msg = `GitHub error ${err.status}: ${err.message}`;
+    } else if (err instanceof GitHubTimeoutError) {
+      msg = err.message;
+    } else {
+      msg = `Analysis error: ${String(err)}`;
+    }
     updateAnalysisStatus(analysisId, 'failed', msg);
     for (const pid of ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode']) {
       updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });

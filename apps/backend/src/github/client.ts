@@ -1,6 +1,14 @@
 import { GitHubFetchError, type GitHubProfile, type GitHubRepo, type GitHubSnapshot } from './types';
 
 const BASE = 'https://api.github.com';
+const FETCH_TIMEOUT_MS = 10_000;
+
+export class GitHubTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GitHubTimeoutError';
+  }
+}
 
 function headers(): Record<string, string> {
   const h: Record<string, string> = {
@@ -12,9 +20,20 @@ function headers(): Record<string, string> {
 }
 
 async function get<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: headers() });
-  if (!res.ok) throw new GitHubFetchError(`GitHub API ${res.status}`, res.status);
-  return (await res.json()) as T;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers: headers(), signal: controller.signal });
+    if (!res.ok) throw new GitHubFetchError(`GitHub API ${res.status}`, res.status);
+    return (await res.json()) as T;
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      throw new GitHubTimeoutError(`GitHub API request timed out after ${FETCH_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function fetchGitHubData(username: string): Promise<GitHubSnapshot> {

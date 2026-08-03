@@ -11,7 +11,8 @@ Respond ONLY with a JSON object (no markdown fences) matching exactly this shape
     { "key": "languages", "label": "Languages", "score": <1-10> },
     { "key": "contribution", "label": "Contribution Activity", "score": <1-10> },
     { "key": "project_depth", "label": "Project Depth", "score": <1-10> },
-    { "key": "oss_experience", "label": "Open Source Experience", "score": <1-10> }
+    { "key": "oss_experience", "label": "Open Source Experience", "score": <1-10> },
+    { "key": "seniority", "label": "Seniority Level", "score": <1-10, where 1-3=Junior, 4-7=Mid, 8-10=Senior> }
   ],
   "top_repos": [{ "name": "<repo name>", "stars": <int>, "description": "<short>", "reason": "<why this repo stands out>" }],
   "strengths": ["<strength>"],

@@ -2,14 +2,15 @@
 
 Analyze a candidate's GitHub profile with free LLM providers (Gemini, Groq, OpenRouter, NVIDIA) and get a recruiter-friendly scorecard report.
 
-Built for a tech recruiter screening a candidate's GitHub presence: paste a profile link, confirm the target username, and receive a structured, per-provider scorecard evaluating skills, project depth, contribution activity, and open-source experience — delivered with live progress over WebSocket and resilient to page reloads.
+Built for a tech recruiter screening a candidate's GitHub presence: paste a profile link, confirm the target username, and receive a structured, per-provider scorecard evaluating skills, project depth, contribution activity, open-source experience, and seniority level — delivered with live progress over WebSocket and resilient to page reloads. Once a profile is analyzed, any of its top repositories can be drilled into for a focused per-repo technical assessment.
 
 ## Project Goals
 
 - **Turn raw GitHub history into a hiring signal.** The backend fetches a candidate's public profile, repositories, language mix, popularity, and contribution activity, then compresses it into one compact snapshot so providers evaluate the same evidence consistently.
-- **Zero-cost, multi-model analysis.** At least two free LLM providers (Gemini, Groq, OpenRouter) analyze the same snapshot against a fixed recruiter scoring rubric; their results are shown side-by-side in tabs.
-- **Structured, validated output.** Every provider must return strict JSON matching the shared `Scorecard` schema (5 dimension scores 1–10, top repos, strengths, gaps, verdict). Responses are validated with zod; malformed output is treated as that provider's retryable failure, not a request failure.
+- **Zero-cost, multi-model analysis.** Free LLM providers (Gemini, Groq, OpenRouter, NVIDIA NVCF) analyze the same snapshot against a fixed recruiter scoring rubric; their results are shown side-by-side in tabs.
+- **Structured, validated output.** Every provider must return strict JSON matching the shared `Scorecard` schema (6 dimension scores 1–10 including a seniority level, top repos, strengths, gaps, verdict). Responses are validated with zod; malformed output is treated as that provider's retryable failure, not a request failure.
 - **Live progress with shared runtime.** A single WebSocket channel streams per-provider progress to every connected viewer. Multiple sessions watching the same profile share one running analysis (deduplicated retries, no duplicate work).
+- **Per-repo deep dives.** After a profile analysis, any top repository can be analyzed on demand against a separate repo rubric (code quality, documentation, workflow, collaboration, activity) with a single chosen provider — a recruiter-only alternative to reading the codebase themselves.
 - **Recoverable UX.** Only the `sessionId` lives in localStorage; everything else is re-fetched. Reload mid-analysis (F5) restores the Analysis screen and reconnects the stream.
 
 ## How This Project Was Built (AI-Driven Development)
@@ -46,20 +47,20 @@ repo-dna/
 ├── apps/
 │   ├── frontend/            # Vue 3 + Vite recruiter UI
 │   │   └── src/
-│   │       ├── pages/       # Home, Analysis, Report
-│   │       ├── components/  # ConfirmModal, ProviderCard, ScorecardTable, VerdictBox
-│   │       ├── api/         # REST + WebSocket client for the backend
-│   │       ├── stores/      # session + analysis state (Pinia)
-│   │       └── utils/       # GitHub URL validation + username extraction
+│   │   ├── pages/       # Home, Analysis, Report, RepoReport
+│   │   ├── components/  # ConfirmModal, ProviderCard, ScorecardTable, RepoAnalyzeRow, VerdictBox
+│   │   ├── api/         # REST + WebSocket client for the backend
+│   │   ├── stores/      # session + analysis state (Pinia)
+│   │   └── utils/       # GitHub URL validation + username extraction
 │   └── backend/             # Next.js + TS API server (Dockerized)
 │       ├── pages/api/       # REST + WebSocket routes
 │       ├── src/
-│       │   ├── api/         # route helpers, run-analysis wiring, summaries
-│       │   ├── github/      # GitHub REST API client + data snapshot
-│       │   ├── llm/         # provider abstraction (Gemini, Groq, OpenRouter)
+│       │   ├── api/         # route helpers, run-analysis wiring, repo-runner, summaries
+│       │   ├── github/      # GitHub REST API client + data snapshot + repo README fetch
+│       │   ├── llm/         # provider abstraction (Gemini, Groq, OpenRouter, NVCF) + prompts
 │       │   ├── analysis/    # orchestration runner + event sink
 │       │   ├── ws/          # WebSocket hub
-│       │   ├── db/          # SQLite access layer (sessions, analyses, providers)
+│       │   ├── db/          # SQLite access layer (sessions, analyses, providers, repo analyses)
 │       │   └── ...
 │       └── server.ts        # custom server: mounts Next.js + /ws
 ├── packages/
@@ -82,13 +83,14 @@ Next.js Pages Router API        ┌─ custom HTTP server (server.ts)
       ▼                         │  └─ WebSocketServer @ /ws
 Backend domain ────────────────▶┘
   ├─ github/    fetch profile + repos + languages + activity → GitHubSnapshot
-  ├─ llm/       LLMProvider interface; Gemini/Groq/OpenRouter/NVCF impls
+  ├─ llm/       LLMProvider interface; Gemini/Groq/OpenRouter/NVCF impls + repo prompts
   ├─ analysis/  runner orchestrates providers in parallel, emits events
+  ├─ api/       repo-runner: single-provider per-repo analysis (README + metadata)
   ├─ ws/        hub fans out provider-update/final events to subscribers
-  └─ db/        SQLite persistence (sessions, analyses, provider rows)
+  └─ db/        SQLite persistence (sessions, analyses, provider rows, repo analyses)
 ```
 
-- **Contract package.** `@repo/shared` defines the `Scorecard` schema (zod) that is the contract between LLM output, backend validation, and frontend rendering.
+- **Contract package.** `@repo/shared` defines the `Scorecard` and `RepoScorecard` schemas (zod) that are the contracts between LLM output, backend validation, and frontend rendering.
 - **Single source of truth.** The backend orchestrates session management, GitHub data fetching, parallel LLM calls, persistence, retry handling, and shared-runtime coordination; the frontend is a thin client.
 - **Session model.** Sessions live in SQLite with a 12h expiry. One active (running) analysis per session is enforced server-side (`409` for a second concurrent start), which holds across tabs sharing a session.
 - **Shared runtime.** When a username already has a `running` analysis in a *different* session, a new start returns `200 { shared: true }` — the new viewer subscribes to the same stream and can retry failed providers (deduplicated), but never duplicates the work.
@@ -104,6 +106,8 @@ Backend domain ────────────────▶┘
 | GET | `/api/analysis/:id` | Analysis state (per-provider status/progress/timestamps) |
 | GET | `/api/analysis/:id/report` | Full report (scorecards) for a completed analysis |
 | POST | `/api/analysis/:id/retry` | Retry a single failed provider; `201` new retry, `200 {shared:true}` if already being retried, `429` inside 45s cooldown |
+| POST | `/api/analysis/:id/repo` | Start a per-repo analysis (body: `repo`, `provider`, optional `model` + metadata) |
+| GET | `/api/analysis/:id/repo?repo=...` | Latest repo analysis for a given repo name |
 | WS | `/ws?sessionId=...` | Live progress stream; opened only while an analysis is running (bound to the requesting session) |
 
 The frontend sends the `sessionId` via the `x-session-id` header for REST calls and as a query param for the WebSocket upgrade.
@@ -115,14 +119,35 @@ Each provider returns a validated scorecard:
 ```
 {
   provider: "gemini" | "groq" | "openrouter" | "nvcf",
-  dimensions: [ { key, label, score: 1-10 } ×5 ],   // code_quality, languages,
-                                                     // contribution, project_depth, oss_experience
+  dimensions: [ { key, label, score: 1-10 } ×6 ],   // code_quality, languages,
+                                                     // contribution, project_depth,
+                                                     // oss_experience, seniority
   top_repos: [ { name, stars, description, reason } ],
   strengths: [string],
   gaps: [string],
   verdict: { leaning: "hire" | "no_hire" | "uncertain", summary: string }
 }
 ```
+
+The `seniority` dimension uses the scale `1-3 = Junior`, `4-7 = Mid`, `8-10 = Senior`, letting recruiters surface level at a glance.
+
+### Per-Repo Scorecard
+
+Drilling into a top repo produces a focused assessment with a single chosen provider:
+
+```
+{
+  repo_name: string,
+  provider: "gemini" | "groq" | "openrouter" | "nvcf",
+  dimensions: [ { key, label, score: 1-10 } ×5 ],   // code_quality, documentation,
+                                                     // workflow, collaboration, activity
+  strengths: [string],
+  gaps: [string],
+  verdict: { leaning: "strong" | "moderate" | "weak", summary: string }
+}
+```
+
+The repo analysis uses the repository's README (base64-decoded, truncated to 8000 chars) plus metadata such as stars, language, and topics. It runs outside the WebSocket stream; the `RepoAnalyzeRow` component polls for the completed result and links to the `/report/:analysisId/repo/:repoName` page.
 
 ## Getting Started
 

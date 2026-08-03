@@ -9,5 +9,5 @@ export interface AnalyzeContext {
 export interface LLMProvider {
   id: ProviderId;
   displayName: string;
-  analyze(ctx: AnalyzeContext): Promise<Scorecard>;
+  analyze(ctx: AnalyzeContext, model: string): Promise<Scorecard>;
 }

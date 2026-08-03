@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAnalysisStore } from '../stores/analysis';
 import { useSessionStore } from '../stores/session';
@@ -73,6 +73,13 @@ onMounted(async () => {
     subscribe();
   }
 });
+
+watch(
+  () => store.isRunning,
+  (running) => {
+    if (running && store.analysisId) subscribe();
+  }
+);
 
 onUnmounted(() => closeWs?.());
 </script>

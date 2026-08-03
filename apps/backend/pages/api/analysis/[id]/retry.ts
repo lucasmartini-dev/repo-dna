@@ -6,6 +6,7 @@ import { getProvider } from '../../../../src/llm';
 import { fetchGitHubData } from '../../../../src/github/client';
 import { runProviders } from '../../../../src/analysis/runner';
 import { wsHub } from '../../../../src/ws/hub';
+import { PROVIDER_MODELS, type ProviderId } from '@repo/shared';
 
 const COOLDOWN_MS = 45_000;
 
@@ -36,10 +37,12 @@ export async function retryHandler(req: NextApiRequest, res: NextApiResponse) {
   updateAnalysisStatus(analysisId, 'running');
   try {
     const snapshot = await fetchGitHubData(analysis.username);
+    const modelId = PROVIDER_MODELS[provider as ProviderId]?.[0]?.id ?? provider;
     await runProviders(
       analysisId,
       snapshot,
       [provider],
+      { [provider]: modelId },
       (pid) => getProvider(pid as never),
       (event) => wsHub.publish(event.analysisId, event)
     );

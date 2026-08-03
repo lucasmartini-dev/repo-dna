@@ -106,4 +106,34 @@ describe('AnalysisView', () => {
     await flushPromises();
     expect(connectAnalysisWs).toHaveBeenCalledWith(analysisId, activeSessionId, expect.any(Object));
   });
+
+  it('resubscribes to websocket when analysis transitions from failed to running after retry', async () => {
+    const session = useSessionStore();
+    const activeSessionId = session.ensureSession();
+    const store = useAnalysisStore();
+    store.analysisId = analysisId;
+    store.analysis = {
+      id: analysisId,
+      sessionId: activeSessionId,
+      username,
+      status: 'failed',
+      error: null,
+      createdAt: new Date().toISOString(),
+      providers: [],
+    } as never;
+    mount(AnalysisView);
+    await flushPromises();
+    const calledAfterMount = (connectAnalysisWs as ReturnType<typeof vi.fn>).mock.calls.length;
+    store.analysis = {
+      id: analysisId,
+      sessionId: activeSessionId,
+      username,
+      status: 'running',
+      error: null,
+      createdAt: new Date().toISOString(),
+      providers: [],
+    } as never;
+    await flushPromises();
+    expect((connectAnalysisWs as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(calledAfterMount);
+  });
 });

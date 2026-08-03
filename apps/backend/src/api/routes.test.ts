@@ -12,6 +12,32 @@ jest.mock('../../src/api/router', () => ({
   startAnalysisAsync: jest.fn(),
 }));
 
+jest.mock('../../src/github/client', () => ({
+  fetchGitHubData: jest.fn().mockResolvedValue({
+    profile: {
+      username: 'test',
+      name: null,
+      bio: null,
+      followers: 0,
+      following: 0,
+      repoCount: 0,
+      createdAt: '',
+      location: null,
+      company: null,
+      avatarUrl: '',
+    },
+    repos: [],
+    languages: [],
+    activity: {},
+  }),
+}));
+
+jest.mock('../../src/analysis/runner', () => ({
+  runProviders: jest.fn().mockResolvedValue(undefined),
+}));
+
+const mockRunProviders = jest.requireMock('../../src/analysis/runner').runProviders as jest.Mock;
+
 const sessionId = faker.string.uuid();
 const analysisId = faker.string.uuid();
 const username = faker.internet.userName();
@@ -97,5 +123,24 @@ describe('retry', () => {
     req.query = { id: analysisId };
     await retryHandler(req, res);
     expect(res.statusCode).toBe(429);
+  });
+
+  it('passes models to runProviders on retry', async () => {
+    mockRunProviders.mockClear();
+    createSession(sessionId, Date.now() + 43_200_000);
+    createAnalysis(analysisId, sessionId, username);
+    createProviderRows(analysisId, ['gemini'], { gemini: 'g1' });
+    const { req, res } = createMockReqRes();
+    req.body = { sessionId, provider: 'gemini' };
+    req.query = { id: analysisId };
+    await retryHandler(req, res);
+    expect(mockRunProviders).toHaveBeenCalledWith(
+      analysisId,
+      expect.any(Object),
+      ['gemini'],
+      expect.objectContaining({ gemini: expect.any(String) }),
+      expect.any(Function),
+      expect.any(Function)
+    );
   });
 });

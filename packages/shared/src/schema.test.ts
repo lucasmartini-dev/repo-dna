@@ -4,6 +4,7 @@ import { ScorecardSchema } from './index';
 
 const validScorecard = {
   provider: 'gemini',
+  model: 'gemini-2.0-flash',
   status: 'succeeded',
   progress: 100,
   startedAt: '2026-01-01T00:00:00.000Z',

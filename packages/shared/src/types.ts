@@ -1,7 +1,27 @@
-export type ProviderId = 'gemini' | 'groq' | 'openrouter' | 'nvcf';
+export type ProviderId = 'gemini' | 'groq' | 'openrouter' | 'nvcf' | 'opencode';
 export type ProviderStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 export type VerdictLeaning = 'hire' | 'no_hire' | 'uncertain';
 export type AnalysisStatus = 'running' | 'succeeded' | 'failed';
+
+export interface ModelOption {
+  id: string;
+  displayName: string;
+  free: boolean;
+}
+
+export const PROVIDER_MODELS: Record<ProviderId, ModelOption[]> = {
+  gemini: [
+    { id: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash (free)', free: true },
+    { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', free: false },
+  ],
+  groq: [{ id: 'llama-3.1-8b-instant', displayName: 'Llama 3.1 8B Instant', free: false }],
+  openrouter: [
+    { id: 'meta-llama/llama-3.1-8b-instruct:free', displayName: 'Llama 3.1 8B (free)', free: true },
+    { id: 'google/gemini-2.0-flash-001:free', displayName: 'Gemini 2.0 Flash (free)', free: true },
+  ],
+  nvcf: [{ id: 'meta/llama-3.1-8b-instruct', displayName: 'Llama 3.1 8B Instruct', free: false }],
+  opencode: [{ id: 'deepseek-v4-flash', displayName: 'DeepSeek V4 Flash (free)', free: true }],
+};
 
 export interface Dimension {
   key: 'code_quality' | 'languages' | 'contribution' | 'project_depth' | 'oss_experience';
@@ -23,6 +43,7 @@ export interface Verdict {
 
 export interface Scorecard {
   provider: ProviderId;
+  model: string | null;
   status: ProviderStatus;
   progress: number;
   startedAt: string | null;
@@ -45,7 +66,7 @@ export interface AnalysisSummary {
   providers: Scorecard[];
 }
 
-export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter', 'nvcf'] as const;
+export const PROVIDER_IDS = ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'] as const;
 
 export const DIMENSION_DEFS: Array<{ key: Dimension['key']; label: string }> = [
   { key: 'code_quality', label: 'Code Quality' },

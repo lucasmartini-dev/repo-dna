@@ -1,12 +1,16 @@
 import { getDb, type ProviderRow } from './database';
 
-export function createProviderRows(analysisId: string, providerIds: readonly string[]): void {
+export function createProviderRows(
+  analysisId: string,
+  providerIds: readonly string[],
+  models: Record<string, string>
+): void {
   const insert = getDb().prepare(
-    "INSERT INTO providers (analysis_id, provider, status, progress, last_updated) VALUES (?, ?, 'pending', 0, ?)"
+    "INSERT INTO providers (analysis_id, provider, status, progress, last_updated, model) VALUES (?, ?, 'pending', 0, ?, ?)"
   );
   const now = Date.now();
   const tx = getDb().transaction(() => {
-    for (const p of providerIds) insert.run(analysisId, p, now);
+    for (const p of providerIds) insert.run(analysisId, p, now, models[p] ?? null);
   });
   tx();
 }
@@ -14,7 +18,7 @@ export function createProviderRows(analysisId: string, providerIds: readonly str
 export function getProviderRows(analysisId: string): ProviderRow[] {
   return getDb()
     .prepare(
-      'SELECT analysis_id AS analysisId, provider, status, progress, started_at AS startedAt, last_updated AS lastUpdated, completed_at AS completedAt, last_attempt_at AS lastAttemptAt, scorecard FROM providers WHERE analysis_id = ? ORDER BY provider'
+      'SELECT analysis_id AS analysisId, provider, status, progress, started_at AS startedAt, last_updated AS lastUpdated, completed_at AS completedAt, last_attempt_at AS lastAttemptAt, scorecard, model FROM providers WHERE analysis_id = ? ORDER BY provider'
     )
     .all(analysisId) as ProviderRow[];
 }
@@ -22,7 +26,7 @@ export function getProviderRows(analysisId: string): ProviderRow[] {
 export function getProviderRow(analysisId: string, provider: string): ProviderRow | undefined {
   return getDb()
     .prepare(
-      'SELECT analysis_id AS analysisId, provider, status, progress, started_at AS startedAt, last_updated AS lastUpdated, completed_at AS completedAt, last_attempt_at AS lastAttemptAt, scorecard FROM providers WHERE analysis_id = ? AND provider = ?'
+      'SELECT analysis_id AS analysisId, provider, status, progress, started_at AS startedAt, last_updated AS lastUpdated, completed_at AS completedAt, last_attempt_at AS lastAttemptAt, scorecard, model FROM providers WHERE analysis_id = ? AND provider = ?'
     )
     .get(analysisId, provider) as ProviderRow | undefined;
 }
@@ -30,7 +34,7 @@ export function getProviderRow(analysisId: string, provider: string): ProviderRo
 export function updateProvider(
   analysisId: string,
   provider: string,
-  patch: Partial<Pick<ProviderRow, 'status' | 'progress' | 'startedAt' | 'completedAt' | 'scorecard'>>
+  patch: Partial<Pick<ProviderRow, 'status' | 'progress' | 'startedAt' | 'completedAt' | 'scorecard' | 'model'>>
 ): void {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -53,6 +57,10 @@ export function updateProvider(
   if (patch.scorecard !== undefined) {
     sets.push('scorecard = ?');
     values.push(patch.scorecard);
+  }
+  if (patch.model !== undefined) {
+    sets.push('model = ?');
+    values.push(patch.model);
   }
   sets.push('last_updated = ?');
   values.push(Date.now(), analysisId, provider);

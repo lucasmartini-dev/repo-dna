@@ -61,9 +61,16 @@ describe('providers', () => {
   it('creates and updates provider rows', () => {
     createSession(s1, 1_700_000_000_000 + 43_200_000);
     createAnalysis(a1, s1, username);
-    createProviderRows(a1, PROVIDER_IDS);
+    createProviderRows(a1, PROVIDER_IDS as unknown as string[], {
+      gemini: 'gemini-2.0-flash',
+      groq: 'llama-3.1-8b-instant',
+      openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+      nvcf: 'meta/llama-3.1-8b-instruct',
+      opencode: 'deepseek-v4-flash',
+    });
     const rows = getProviderRows(a1);
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(5);
+    expect(rows[0].model).toBe('gemini-2.0-flash');
     expect(rows.every((r) => r.status === 'pending')).toBe(true);
 
     updateProvider(a1, 'gemini', {
@@ -72,6 +79,9 @@ describe('providers', () => {
       scorecard: JSON.stringify({ provider: 'gemini' }),
     });
     expect(getProviderRow(a1, 'gemini')).toMatchObject({ status: 'succeeded' });
+
+    updateProvider(a1, 'gemini', { model: 'gemini-2.5-flash' });
+    expect(getProviderRow(a1, 'gemini')?.model).toBe('gemini-2.5-flash');
 
     touchProviderAttempt(a1, 'groq', 1_700_000_000_000);
     expect(getProviderRow(a1, 'groq')?.lastAttemptAt).toBe(1_700_000_000_000);

@@ -23,7 +23,7 @@ export const PROVIDER_MODELS: Record<ProviderId, ModelOption[]> = {
 };
 
 export interface Dimension {
-  key: 'code_quality' | 'languages' | 'contribution' | 'project_depth' | 'oss_experience';
+  key: 'code_quality' | 'languages' | 'contribution' | 'project_depth' | 'oss_experience' | 'seniority';
   label: string;
   score: number;
 }
@@ -73,4 +73,5 @@ export const DIMENSION_DEFS: Array<{ key: Dimension['key']; label: string }> = [
   { key: 'contribution', label: 'Contribution Activity' },
   { key: 'project_depth', label: 'Project Depth' },
   { key: 'oss_experience', label: 'Open Source Experience' },
+  { key: 'seniority', label: 'Seniority Level' },
 ];

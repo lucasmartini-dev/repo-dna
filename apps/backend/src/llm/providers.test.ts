@@ -8,4 +8,9 @@ describe('providers', () => {
     expect(getProvider('gemini').id).toBe('gemini');
     expect(() => getProvider('x' as never)).toThrow();
   });
+  it('each provider has analyzeCustomPrompt method', () => {
+    for (const p of providers) {
+      expect(typeof p.analyzeCustomPrompt).toBe('function');
+    }
+  });
 });

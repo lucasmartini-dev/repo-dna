@@ -26,4 +26,21 @@ export class GeminiProvider implements LLMProvider {
     ctx.onProgress(100);
     return scorecard;
   }
+  async analyzeCustomPrompt(systemPrompt: string, userPrompt: string, model: string): Promise<string> {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) throw new Error('GEMINI_API_KEY is not set');
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: userPrompt }] }],
+      }),
+    });
+    if (!res.ok) throw new Error(`Gemini API ${res.status}`);
+    const data = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  }
 }

@@ -10,4 +10,5 @@ export interface LLMProvider {
   id: ProviderId;
   displayName: string;
   analyze(ctx: AnalyzeContext, model: string): Promise<Scorecard>;
+  analyzeCustomPrompt(systemPrompt: string, userPrompt: string, model: string): Promise<string>;
 }

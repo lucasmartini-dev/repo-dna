@@ -32,4 +32,23 @@ export class GroqProvider implements LLMProvider {
     ctx.onProgress(100);
     return scorecard;
   }
+  async analyzeCustomPrompt(systemPrompt: string, userPrompt: string, model: string): Promise<string> {
+    const key = process.env.GROQ_API_KEY;
+    if (!key) throw new Error('GROQ_API_KEY is not set');
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.2,
+      }),
+    });
+    if (!res.ok) throw new Error(`Groq API ${res.status}`);
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    return data.choices?.[0]?.message?.content ?? '';
+  }
 }

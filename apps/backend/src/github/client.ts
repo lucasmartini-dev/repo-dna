@@ -36,6 +36,20 @@ async function get<T>(url: string): Promise<T> {
   }
 }
 
+export async function fetchRepoReadme(owner: string, repo: string): Promise<string | null> {
+  try {
+    const data = await get<{ content: string; encoding: string }>(
+      `${BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme`
+    );
+    if (data.encoding === 'base64') {
+      return Buffer.from(data.content, 'base64').toString('utf-8');
+    }
+    return data.content;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchGitHubData(username: string): Promise<GitHubSnapshot> {
   const profile = await get<GitHubProfile>(`${BASE}/users/${encodeURIComponent(username)}`);
   const repos = await get<GitHubRepo[]>(

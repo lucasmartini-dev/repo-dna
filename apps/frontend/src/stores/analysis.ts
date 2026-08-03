@@ -27,10 +27,13 @@ export const useAnalysisStore = defineStore('analysis', () => {
     return cooldowns.value[provider] ?? 0;
   }
 
-  async function start(input: string): Promise<'started' | 'shared' | 'conflict' | 'error'> {
+  async function start(
+    input: string,
+    models: Record<string, string> = {}
+  ): Promise<'started' | 'shared' | 'conflict' | 'error'> {
     const session = useSessionStore();
     const sessionId = session.ensureSession();
-    const result = await startAnalysis(input, sessionId);
+    const result = await startAnalysis(input, sessionId, models);
     if (result.status === 409) return 'conflict';
     if (result.status === 401) return 'error';
     if (result.status === 200 && result.shared) {

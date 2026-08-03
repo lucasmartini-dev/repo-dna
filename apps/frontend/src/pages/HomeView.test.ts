@@ -12,6 +12,16 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock('@repo/shared', () => ({
+  PROVIDER_IDS: ['github', 'linkedin', 'twitter', 'instagram'],
+  PROVIDER_MODELS: {
+    github: [{ id: 'gpt-4', displayName: 'GPT-4' }],
+    linkedin: [{ id: 'gpt-4', displayName: 'GPT-4' }],
+    twitter: [{ id: 'gpt-4', displayName: 'GPT-4' }],
+    instagram: [{ id: 'gpt-4', displayName: 'GPT-4' }],
+  },
+}));
+
 const sessionId = faker.string.uuid();
 const analysisId = faker.string.uuid();
 const username = faker.internet.userName().replace(/[^A-Za-z0-9-]/g, '');
@@ -30,14 +40,14 @@ describe('HomeView', () => {
     expect(wrapper.text()).toContain('invalid');
   });
 
-  it('shows the confirmation modal for a valid link', async () => {
+  it('shows model dropdowns for a valid link', async () => {
     const wrapper = mount(HomeView);
     await wrapper.find('input').setValue(`https://github.com/${username}`);
     await wrapper.find('button.primary').trigger('click');
-    expect(wrapper.text()).toContain(username);
+    expect(wrapper.text()).toContain('Choose models');
   });
 
-  it('starts analysis on confirm', async () => {
+  it('shows model dropdowns after valid link and starts analysis', async () => {
     vi.spyOn(client, 'startAnalysis').mockResolvedValue({ status: 201, analysisId, username, shared: false });
     vi.spyOn(client, 'fetchAnalysis').mockResolvedValue({
       id: analysisId,
@@ -52,7 +62,10 @@ describe('HomeView', () => {
     const wrapper = mount(HomeView);
     await wrapper.find('input').setValue(`https://github.com/${username}`);
     await wrapper.find('button.primary').trigger('click');
-    await wrapper.find('button.confirm').trigger('click');
+    expect(wrapper.text()).toContain('Choose models');
+    const selects = wrapper.findAll('select');
+    expect(selects.length).toBeGreaterThanOrEqual(4);
+    await wrapper.find('[data-test="confirm-models"]').trigger('click');
     await vi.waitFor(() => expect(store.analysisId).toBe(analysisId));
   });
 });

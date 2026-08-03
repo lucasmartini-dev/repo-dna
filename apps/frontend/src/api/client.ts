@@ -30,11 +30,15 @@ export interface StartAnalysisResult {
   error?: string;
 }
 
-export async function startAnalysis(username: string, sessionId: string): Promise<StartAnalysisResult> {
+export async function startAnalysis(
+  username: string,
+  sessionId: string,
+  models: Record<string, string> = {}
+): Promise<StartAnalysisResult> {
   const { status, body } = await request<StartAnalysisResult>('/api/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ username, models }),
   });
   return { ...body, status };
 }

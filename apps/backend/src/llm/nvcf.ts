@@ -7,7 +7,7 @@ const API = 'https://integrate.api.nvidia.com/v1/chat/completions';
 export class NvcfProvider implements LLMProvider {
   id = 'nvcf' as const;
   displayName = 'NVIDIA NVCF';
-  async analyze(ctx: AnalyzeContext): Promise<ReturnType<typeof parseScorecardJson>> {
+  async analyze(ctx: AnalyzeContext, model: string): Promise<ReturnType<typeof parseScorecardJson>> {
     ctx.onProgress(20);
     const key = process.env.NVCF_API_KEY;
     if (!key) throw new Error('NVCF_API_KEY is not set');
@@ -15,7 +15,7 @@ export class NvcfProvider implements LLMProvider {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: 'meta/llama-3.1-8b-instruct',
+        model,
         messages: [
           { role: 'system', content: buildSystemPrompt() },
           { role: 'user', content: buildUserPrompt(ctx.snapshot) },

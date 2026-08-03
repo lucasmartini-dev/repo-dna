@@ -7,7 +7,7 @@ const API = 'https://openrouter.ai/api/v1/chat/completions';
 export class OpenRouterProvider implements LLMProvider {
   id = 'openrouter' as const;
   displayName = 'OpenRouter';
-  async analyze(ctx: AnalyzeContext): Promise<ReturnType<typeof parseScorecardJson>> {
+  async analyze(ctx: AnalyzeContext, model: string): Promise<ReturnType<typeof parseScorecardJson>> {
     ctx.onProgress(20);
     const key = process.env.OPENROUTER_API_KEY;
     if (!key) throw new Error('OPENROUTER_API_KEY is not set');
@@ -19,7 +19,7 @@ export class OpenRouterProvider implements LLMProvider {
         'HTTP-Referer': 'http://localhost:3000',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct',
+        model,
         messages: [
           { role: 'system', content: buildSystemPrompt() },
           { role: 'user', content: buildUserPrompt(ctx.snapshot) },

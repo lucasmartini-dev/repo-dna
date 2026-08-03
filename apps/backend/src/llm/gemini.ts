@@ -2,16 +2,14 @@ import type { AnalyzeContext, LLMProvider } from './provider';
 import { buildSystemPrompt, buildUserPrompt } from './prompts';
 import { parseScorecardJson } from './json';
 
-const API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
 export class GeminiProvider implements LLMProvider {
   id = 'gemini' as const;
   displayName = 'Gemini';
-  async analyze(ctx: AnalyzeContext): Promise<ReturnType<typeof parseScorecardJson>> {
+  async analyze(ctx: AnalyzeContext, model: string): Promise<ReturnType<typeof parseScorecardJson>> {
     ctx.onProgress(20);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error('GEMINI_API_KEY is not set');
-    const res = await fetch(API, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({

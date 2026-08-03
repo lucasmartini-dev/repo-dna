@@ -7,7 +7,7 @@ const API = 'https://api.groq.com/openai/v1/chat/completions';
 export class GroqProvider implements LLMProvider {
   id = 'groq' as const;
   displayName = 'Groq';
-  async analyze(ctx: AnalyzeContext): Promise<ReturnType<typeof parseScorecardJson>> {
+  async analyze(ctx: AnalyzeContext, model: string): Promise<ReturnType<typeof parseScorecardJson>> {
     ctx.onProgress(20);
     const key = process.env.GROQ_API_KEY;
     if (!key) throw new Error('GROQ_API_KEY is not set');
@@ -15,7 +15,7 @@ export class GroqProvider implements LLMProvider {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model,
         messages: [
           { role: 'system', content: buildSystemPrompt() },
           { role: 'user', content: buildUserPrompt(ctx.snapshot) },

@@ -13,7 +13,7 @@
     </div>
     <template v-if="activeCard">
       <VerdictBox :card="activeCard" />
-      <ScorecardTable :card="activeCard" />
+      <ScorecardTable :card="activeCard" :analysis-id="id" />
     </template>
     <p v-else-if="report && report.scorecards.length === 0" data-test="no-scorecards">
       No provider succeeded. Please retry a failed provider.

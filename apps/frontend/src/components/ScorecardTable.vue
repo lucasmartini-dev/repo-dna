@@ -9,11 +9,12 @@
       <span class="dim-score">{{ d.score }}/10</span>
     </div>
     <h4>Top repos</h4>
-    <ul>
-      <li v-for="r in card.top_repos" :key="r.name">
-        {{ r.name }} (⭐{{ r.stars }}) — {{ r.description }} <em>{{ r.reason }}</em>
-      </li>
-    </ul>
+    <div class="repo-list">
+      <div v-for="r in card.top_repos" :key="r.name" class="repo-item">
+        <RepoAnalyzeRow :repo="r" :analysis-id="analysisId" />
+        <em class="repo-reason">{{ r.reason }}</em>
+      </div>
+    </div>
     <h4>Strengths</h4>
     <ul>
       <li v-for="s in card.strengths" :key="s">
@@ -31,7 +32,9 @@
 
 <script setup lang="ts">
 import type { Scorecard } from '@repo/shared';
-defineProps<{ card: Scorecard }>();
+import RepoAnalyzeRow from './RepoAnalyzeRow.vue';
+
+defineProps<{ card: Scorecard; analysisId: string }>();
 </script>
 
 <style scoped>
@@ -55,5 +58,13 @@ defineProps<{ card: Scorecard }>();
 .dim-score {
   width: 40px;
   text-align: right;
+}
+.repo-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+.repo-reason {
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 </style>

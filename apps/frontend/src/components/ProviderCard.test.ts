@@ -46,11 +46,21 @@ describe('ProviderCard', () => {
     expect(wrapper.find('.provider-card').attributes('data-status')).toBe('pending');
   });
 
-  it('emits retry on retry button click', async () => {
+  it('emits retry with selected model on retry button click', async () => {
     const wrapper = mount(ProviderCard, {
       props: { card: makeCard({ status: 'failed' }), cooldownRemaining: 0 },
     });
     await wrapper.find('button.retry').trigger('click');
     expect(wrapper.emitted('retry')).toBeTruthy();
+    expect(wrapper.emitted('retry')?.[0]).toEqual(['gemini-2.0-flash']);
+  });
+
+  it('shows model dropdown for failed providers', () => {
+    const wrapper = mount(ProviderCard, {
+      props: { card: makeCard({ status: 'failed' }), cooldownRemaining: 0 },
+    });
+    const select = wrapper.find('select');
+    expect(select.exists()).toBe(true);
+    expect(select.findAll('option').length).toBeGreaterThan(0);
   });
 });

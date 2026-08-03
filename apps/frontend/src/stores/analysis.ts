@@ -72,10 +72,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
-  async function retry(provider: string): Promise<void> {
+  async function retry(provider: string, model?: string): Promise<void> {
     const session = useSessionStore();
     if (!analysisId.value) return;
-    const result = await retryProvider(analysisId.value, session.sessionId ?? '', provider);
+    const result = await retryProvider(analysisId.value, session.sessionId ?? '', provider, model);
     if (result.status === 429 && result.retryAfterSeconds) {
       setCooldown(provider, result.retryAfterSeconds);
       banner.value = `Please wait ${result.retryAfterSeconds}s before retrying ${provider}.`;

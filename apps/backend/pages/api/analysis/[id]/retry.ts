@@ -37,7 +37,8 @@ export async function retryHandler(req: NextApiRequest, res: NextApiResponse) {
   updateAnalysisStatus(analysisId, 'running');
   try {
     const snapshot = await fetchGitHubData(analysis.username);
-    const modelId = PROVIDER_MODELS[provider as ProviderId]?.[0]?.id ?? provider;
+    const requestedModel = (req.body?.model as string) || '';
+    const modelId = (requestedModel || PROVIDER_MODELS[provider as ProviderId]?.[0]?.id) ?? provider;
     await runProviders(
       analysisId,
       snapshot,

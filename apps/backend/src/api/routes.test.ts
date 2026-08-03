@@ -143,4 +143,23 @@ describe('retry', () => {
       expect.any(Function)
     );
   });
+
+  it('uses requested model from body on retry', async () => {
+    mockRunProviders.mockClear();
+    createSession(sessionId, Date.now() + 43_200_000);
+    createAnalysis(analysisId, sessionId, username);
+    createProviderRows(analysisId, ['gemini'], { gemini: 'g1' });
+    const { req, res } = createMockReqRes();
+    req.body = { sessionId, provider: 'gemini', model: 'gemini-2.5-flash' };
+    req.query = { id: analysisId };
+    await retryHandler(req, res);
+    expect(mockRunProviders).toHaveBeenCalledWith(
+      analysisId,
+      expect.any(Object),
+      ['gemini'],
+      { gemini: 'gemini-2.5-flash' },
+      expect.any(Function),
+      expect.any(Function)
+    );
+  });
 });

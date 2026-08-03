@@ -16,9 +16,21 @@
     </template>
     <template v-else-if="card.status === 'failed'">
       <span class="meta">Analysis failed</span>
-      <button class="retry" data-test="retry" :disabled="cooldownRemaining > 0" @click="$emit('retry')">
-        Retry{{ cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : '' }}
-      </button>
+      <div class="retry-row">
+        <select v-model="selectedModel" data-test="retry-model-select" class="retry-model-select">
+          <option v-for="m in providerModels" :key="m.id" :value="m.id">
+            {{ m.displayName }}
+          </option>
+        </select>
+        <button
+          class="retry"
+          data-test="retry"
+          :disabled="cooldownRemaining > 0"
+          @click="$emit('retry', selectedModel)"
+        >
+          Retry{{ cooldownRemaining > 0 ? ` (${cooldownRemaining}s)` : '' }}
+        </button>
+      </div>
     </template>
     <template v-else>
       <button class="view-scorecard" data-test="view-scorecard" @click="$emit('view-scorecard')">View scorecard</button>
@@ -27,12 +39,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { Scorecard } from '@repo/shared';
+import { computed, ref } from 'vue';
+import type { Scorecard, ProviderId } from '@repo/shared';
 import { PROVIDER_MODELS } from '@repo/shared';
 
 const props = defineProps<{ card: Scorecard; cooldownRemaining: number }>();
-defineEmits<{ (e: 'retry'): void; (e: 'view-scorecard'): void }>();
+defineEmits<{ (e: 'retry', model: string): void; (e: 'view-scorecard'): void }>();
+
+const providerModels = computed(() => PROVIDER_MODELS[props.card.provider as ProviderId] ?? []);
+
+const selectedModel = ref(props.card.model ?? providerModels.value[0]?.id ?? '');
 
 const modelDisplayName = computed(() => {
   if (!props.card.model || !props.card.provider) return null;
@@ -124,6 +140,21 @@ const formattedStartedAt = computed(() => {
 .meta {
   color: var(--color-text-muted);
   font-size: 12px;
+}
+
+.retry-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.retry-model-select {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: var(--color-surface);
 }
 
 .retry {

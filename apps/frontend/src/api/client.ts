@@ -74,11 +74,16 @@ export interface RetryResult {
   retryAfterSeconds?: number;
 }
 
-export async function retryProvider(id: string, sessionId: string, provider: string): Promise<RetryResult> {
+export async function retryProvider(
+  id: string,
+  sessionId: string,
+  provider: string,
+  model?: string
+): Promise<RetryResult> {
   const { status, body } = await request<RetryResult>(`/api/analysis/${id}/retry`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
-    body: JSON.stringify({ sessionId, provider }),
+    body: JSON.stringify({ sessionId, provider, model }),
   });
   return { ...body, status };
 }

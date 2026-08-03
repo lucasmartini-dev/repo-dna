@@ -16,7 +16,7 @@
         :key="card.provider"
         :card="card"
         :cooldown-remaining="store.cooldownRemaining(card.provider)"
-        @retry="store.retry(card.provider)"
+        @retry="(model: string) => store.retry(card.provider, model)"
         @view-scorecard="showReport"
       />
       <button v-if="store.analysis.status !== 'running'" class="primary" data-test="view-report" @click="showReport">

@@ -30,6 +30,19 @@ export interface ProviderRow {
   model: string | null;
 }
 
+export interface RepoAnalysisRow {
+  id: string;
+  analysisId: string;
+  repoName: string;
+  username: string;
+  provider: string;
+  model: string | null;
+  status: 'pending' | 'running' | 'succeeded' | 'failed';
+  error: string | null;
+  scorecard: string | null;
+  createdAt: number;
+}
+
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
@@ -69,6 +82,20 @@ export function getDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_analyses_session ON analyses(session_id);
     CREATE INDEX IF NOT EXISTS idx_analyses_username ON analyses(username);
+    CREATE TABLE IF NOT EXISTS repo_analyses (
+      id TEXT PRIMARY KEY,
+      analysis_id TEXT NOT NULL,
+      repo_name TEXT NOT NULL,
+      username TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      model TEXT,
+      status TEXT NOT NULL,
+      error TEXT,
+      scorecard TEXT,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (analysis_id) REFERENCES analyses(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_repo_analyses_analysis ON repo_analyses(analysis_id, repo_name);
   `);
   const columns = db.pragma('table_info(providers)') as Array<{ name: string }>;
   if (!columns.some((c) => c.name === 'model')) {
@@ -80,6 +107,8 @@ export function getDb(): Database.Database {
 export function resetDbForTests(): void {
   if (process.env.DB_PATH !== ':memory:') return;
   const d = getDb();
-  d.exec('DROP TABLE IF EXISTS providers; DROP TABLE IF EXISTS analyses; DROP TABLE IF EXISTS sessions;');
+  d.exec(
+    'DROP TABLE IF EXISTS repo_analyses; DROP TABLE IF EXISTS providers; DROP TABLE IF EXISTS analyses; DROP TABLE IF EXISTS sessions;'
+  );
   db = null;
 }

@@ -16,6 +16,7 @@ const validScorecard = {
     { key: 'contribution', label: 'Contribution Activity', score: 6 },
     { key: 'project_depth', label: 'Project Depth', score: 9 },
     { key: 'oss_experience', label: 'Open Source Experience', score: 7 },
+    { key: 'seniority', label: 'Seniority', score: 8 },
   ],
   top_repos: [
     {

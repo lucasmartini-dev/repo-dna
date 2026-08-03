@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { PROVIDER_IDS } from './types';
 
 export const DimensionSchema = z.object({
-  key: z.enum(['code_quality', 'languages', 'contribution', 'project_depth', 'oss_experience']),
+  key: z.enum(['code_quality', 'languages', 'contribution', 'project_depth', 'oss_experience', 'seniority']),
   label: z.string(),
   score: z.number().int().min(1).max(10),
 });
@@ -27,7 +27,7 @@ export const ScorecardSchema = z.object({
   startedAt: z.string().nullable(),
   lastUpdated: z.string(),
   completedAt: z.string().nullable(),
-  dimensions: z.array(DimensionSchema).length(5),
+  dimensions: z.array(DimensionSchema).length(6),
   top_repos: z.array(TopRepoSchema),
   strengths: z.array(z.string()),
   gaps: z.array(z.string()),

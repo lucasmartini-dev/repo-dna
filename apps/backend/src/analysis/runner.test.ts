@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { runProviders } from './runner';
 import type { GitHubSnapshot } from '../github/types';
 import type { LLMProvider } from '../llm/provider';
-import type { Scorecard } from '@repo/shared';
+import type { Scorecard, ProviderId } from '@repo/shared';
 import { createSession } from '../db/sessions';
 import { createAnalysis } from '../db/analyses';
 import { createProviderRows, getProviderRows } from '../db/providers';
@@ -13,12 +13,13 @@ const sessionId = faker.string.uuid();
 const analysisId = faker.string.uuid();
 const username = faker.internet.userName();
 
-function makeScorecard(provider: 'gemini' | 'groq' | 'openrouter' | 'nvcf'): Scorecard {
+function makeScorecard(provider: ProviderId): Scorecard {
   const dims = ['code_quality', 'languages', 'contribution', 'project_depth', 'oss_experience'].map(
     (key, i) => ({ key, label: key, score: 10 - i }) as Scorecard['dimensions'][number]
   );
   return {
     provider,
+    model: 'test-model',
     status: 'succeeded',
     progress: 100,
     startedAt: null,
@@ -63,12 +64,13 @@ const snapshot: GitHubSnapshot = {
 
 function makeProvider(id: string, fail = false): LLMProvider {
   return {
-    id: id as 'gemini' | 'groq' | 'openrouter' | 'nvcf',
+    id: id as ProviderId,
     displayName: id,
-    async analyze(ctx) {
+    async analyze(ctx, _model: string) {
+      void _model;
       ctx.onProgress(50);
       if (fail) throw new Error('boom');
-      return makeScorecard(id as 'gemini' | 'groq' | 'openrouter' | 'nvcf');
+      return makeScorecard(id as ProviderId);
     },
   };
 }
@@ -77,42 +79,134 @@ beforeEach(() => resetDbForTests());
 
 describe('runProviders', () => {
   it('marks each provider succeeded and emits final', async () => {
-    createSession(sessionId, 1_700_000_000_000 + 43_200_000);
-    createAnalysis(analysisId, sessionId, username);
-    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
+    jest.useFakeTimers();
+    try {
+      createSession(sessionId, 1_700_000_000_000 + 43_200_000);
+      createAnalysis(analysisId, sessionId, username);
+      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+        gemini: 'gemini-2.0-flash',
+        groq: 'llama-3.1-8b-instant',
+        openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+        nvcf: 'meta/llama-3.1-8b-instruct',
+        opencode: 'deepseek-v4-flash',
+      });
 
-    const events: unknown[] = [];
-    await runProviders(analysisId, snapshot, ['gemini', 'groq', 'openrouter', 'nvcf'], makeProvider, (e) =>
-      events.push(e)
-    );
+      const events: unknown[] = [];
+      const promise = runProviders(
+        analysisId,
+        snapshot,
+        ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+        {
+          gemini: 'gemini-2.0-flash',
+          groq: 'llama-3.1-8b-instant',
+          openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+          nvcf: 'meta/llama-3.1-8b-instruct',
+          opencode: 'deepseek-v4-flash',
+        },
+        makeProvider,
+        (e) => events.push(e)
+      );
 
-    const rows = getProviderRows(analysisId);
-    expect(rows.every((r) => r.status === 'succeeded')).toBe(true);
-    expect(events.some((e) => (e as { type: string }).type === 'final')).toBe(true);
+      await jest.runAllTimersAsync();
+      await promise;
+
+      const rows = getProviderRows(analysisId);
+      expect(rows.every((r) => r.status === 'succeeded')).toBe(true);
+      expect(events.some((e) => (e as { type: string }).type === 'final')).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('marks a failing provider failed without failing others and logs the error', async () => {
-    const errorSpy = jest.spyOn(global.console, 'error').mockImplementation(() => {});
-    createSession(sessionId, 1_700_000_000_000 + 43_200_000);
-    createAnalysis(analysisId, sessionId, username);
-    createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf']);
+    jest.useFakeTimers();
+    try {
+      const errorSpy = jest.spyOn(global.console, 'error').mockImplementation(() => {});
+      createSession(sessionId, 1_700_000_000_000 + 43_200_000);
+      createAnalysis(analysisId, sessionId, username);
+      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+        gemini: 'gemini-2.0-flash',
+        groq: 'llama-3.1-8b-instant',
+        openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+        nvcf: 'meta/llama-3.1-8b-instruct',
+        opencode: 'deepseek-v4-flash',
+      });
 
-    await runProviders(
-      analysisId,
-      snapshot,
-      ['gemini', 'groq', 'openrouter', 'nvcf'],
-      (id) => makeProvider(id, id === 'gemini'),
-      () => {}
-    );
+      const promise = runProviders(
+        analysisId,
+        snapshot,
+        ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+        {
+          gemini: 'gemini-2.0-flash',
+          groq: 'llama-3.1-8b-instant',
+          openrouter: 'meta-llama/llama-3.1-8b-instruct:free',
+          nvcf: 'meta/llama-3.1-8b-instruct',
+          opencode: 'deepseek-v4-flash',
+        },
+        (id) => makeProvider(id, id === 'gemini'),
+        () => {}
+      );
 
-    const rows = getProviderRows(analysisId);
-    expect(rows.find((r) => r.provider === 'gemini')?.status).toBe('failed');
-    expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(3);
+      await jest.runAllTimersAsync();
+      await promise;
 
-    const analysis = getAnalysis(analysisId);
-    expect(analysis?.status).toBe('failed');
-    expect(analysis?.error).toContain('gemini');
+      const rows = getProviderRows(analysisId);
+      expect(rows.find((r) => r.provider === 'gemini')?.status).toBe('failed');
+      expect(rows.filter((r) => r.status === 'succeeded')).toHaveLength(4);
 
-    errorSpy.mockRestore();
+      const analysis = getAnalysis(analysisId);
+      expect(analysis?.status).toBe('failed');
+      expect(analysis?.error).toContain('gemini');
+
+      errorSpy.mockRestore();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('starts providers with staggered delays', async () => {
+    jest.useFakeTimers();
+    try {
+      createSession(sessionId, 1_700_000_000_000 + 43_200_000);
+      createAnalysis(analysisId, sessionId, username);
+      createProviderRows(analysisId, ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'], {
+        gemini: 'g1',
+        groq: 'g2',
+        openrouter: 'g3',
+        nvcf: 'g4',
+        opencode: 'g5',
+      });
+
+      const events: unknown[] = [];
+      const promise = runProviders(
+        analysisId,
+        snapshot,
+        ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+        {
+          gemini: 'g1',
+          groq: 'g2',
+          openrouter: 'g3',
+          nvcf: 'g4',
+          opencode: 'g5',
+        },
+        makeProvider,
+        (e) => events.push(e)
+      );
+
+      const runningUpdates = () => events.filter((e) => (e as { status: string }).status === 'running');
+      expect(runningUpdates()).toHaveLength(0);
+      jest.advanceTimersByTime(3000);
+      await Promise.resolve();
+      expect(runningUpdates()).toHaveLength(2);
+      jest.advanceTimersByTime(1000);
+      await Promise.resolve();
+      expect(runningUpdates()).toHaveLength(4);
+      jest.advanceTimersByTime(4000);
+      await jest.runAllTimersAsync();
+      await promise;
+      expect(events.some((e) => (e as { type: string }).type === 'final')).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

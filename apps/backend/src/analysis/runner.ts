@@ -6,74 +6,98 @@ import type { GitHubSnapshot } from '../github/types';
 import type { LLMProvider } from '../llm/provider';
 import { getProvider } from '../llm';
 import type { EventSink } from './types';
+import type { ProviderId } from '@repo/shared';
+import { PROVIDER_MODELS } from '@repo/shared';
 
 type ProviderFactory = (id: string) => LLMProvider;
+
+async function runSingleProvider(
+  analysisId: string,
+  snapshot: GitHubSnapshot,
+  pid: string,
+  modelId: string,
+  factory: ProviderFactory,
+  sink: EventSink
+): Promise<void> {
+  try {
+    const now = Date.now();
+    touchProviderAttempt(analysisId, pid, now);
+    updateProvider(analysisId, pid, { status: 'running', startedAt: now, model: modelId });
+    sink({
+      type: 'provider-update',
+      analysisId,
+      provider: pid as never,
+      status: 'running',
+      progress: 0,
+      lastUpdated: new Date().toISOString(),
+    });
+    const provider = factory(pid);
+    const scorecard = await provider.analyze(
+      {
+        snapshot,
+        onProgress: (progress) => {
+          updateProvider(analysisId, pid, { progress });
+          sink({
+            type: 'provider-update',
+            analysisId,
+            provider: pid as never,
+            status: 'running',
+            progress,
+            lastUpdated: new Date().toISOString(),
+          });
+        },
+      },
+      modelId
+    );
+    updateProvider(analysisId, pid, {
+      status: 'succeeded',
+      progress: 100,
+      completedAt: Date.now(),
+      scorecard: JSON.stringify(scorecard),
+    });
+    sink({
+      type: 'provider-update',
+      analysisId,
+      provider: pid as never,
+      status: 'succeeded',
+      progress: 100,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[provider ${pid}] failed for analysis ${analysisId}: ${msg}`);
+    updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });
+    sink({
+      type: 'provider-update',
+      analysisId,
+      provider: pid as never,
+      status: 'failed',
+      progress: getProviderRows(analysisId).find((r) => r.provider === pid)?.progress ?? 0,
+      lastUpdated: new Date().toISOString(),
+    });
+  }
+}
 
 export async function runProviders(
   analysisId: string,
   snapshot: GitHubSnapshot,
   providerIds: string[],
+  models: Record<string, string>,
   factory: ProviderFactory,
   sink: EventSink
 ): Promise<void> {
-  await Promise.all(
-    providerIds.map(async (pid) => {
-      const now = Date.now();
-      touchProviderAttempt(analysisId, pid, now);
-      updateProvider(analysisId, pid, { status: 'running', startedAt: now });
-      sink({
-        type: 'provider-update',
-        analysisId,
-        provider: pid as never,
-        status: 'running',
-        progress: 0,
-        lastUpdated: new Date().toISOString(),
-      });
-      try {
-        const provider = factory(pid);
-        const scorecard = await provider.analyze({
-          snapshot,
-          onProgress: (progress) => {
-            updateProvider(analysisId, pid, { progress });
-            sink({
-              type: 'provider-update',
-              analysisId,
-              provider: pid as never,
-              status: 'running',
-              progress,
-              lastUpdated: new Date().toISOString(),
-            });
-          },
-        });
-        updateProvider(analysisId, pid, {
-          status: 'succeeded',
-          progress: 100,
-          completedAt: Date.now(),
-          scorecard: JSON.stringify(scorecard),
-        });
-        sink({
-          type: 'provider-update',
-          analysisId,
-          provider: pid as never,
-          status: 'succeeded',
-          progress: 100,
-          lastUpdated: new Date().toISOString(),
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[provider ${pid}] failed for analysis ${analysisId}: ${msg}`);
-        updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });
-        sink({
-          type: 'provider-update',
-          analysisId,
-          provider: pid as never,
-          status: 'failed',
-          progress: getProviderRows(analysisId).find((r) => r.provider === pid)?.progress ?? 0,
-          lastUpdated: new Date().toISOString(),
-        });
-      }
-    })
-  );
+  const FIRST_START_DELAY = 3000;
+  const INTER_START_DELAY = 1000;
+
+  const promises = providerIds.map((pid, i) => {
+    const delay = FIRST_START_DELAY + i * INTER_START_DELAY;
+    const modelId = models[pid] ?? PROVIDER_MODELS[pid as ProviderId]?.[0]?.id ?? '';
+    return new Promise<void>((resolve) => setTimeout(resolve, delay)).then(() =>
+      runSingleProvider(analysisId, snapshot, pid, modelId, factory, sink)
+    );
+  });
+
+  await Promise.all(promises);
 
   const rows = getProviderRows(analysisId);
   const anySucceeded = rows.some((r) => r.status === 'succeeded');
@@ -84,7 +108,12 @@ export async function runProviders(
   sink({ type: 'final', analysisId, status, error: error ? `Provider ${error} failed` : undefined });
 }
 
-export async function runAnalysis(analysisId: string, username: string, sink: EventSink): Promise<void> {
+export async function runAnalysis(
+  analysisId: string,
+  username: string,
+  models: Record<string, string>,
+  sink: EventSink
+): Promise<void> {
   try {
     const snapshot = await fetchGitHubData(username);
     sink({
@@ -98,7 +127,8 @@ export async function runAnalysis(analysisId: string, username: string, sink: Ev
     await runProviders(
       analysisId,
       snapshot,
-      ['gemini', 'groq', 'openrouter', 'nvcf'],
+      ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode'],
+      models,
       (id) => getProvider(id as never),
       sink
     );
@@ -106,7 +136,7 @@ export async function runAnalysis(analysisId: string, username: string, sink: Ev
     const msg =
       err instanceof GitHubFetchError ? `GitHub error ${err.status}: ${err.message}` : `Analysis error: ${String(err)}`;
     updateAnalysisStatus(analysisId, 'failed', msg);
-    for (const pid of ['gemini', 'groq', 'openrouter', 'nvcf']) {
+    for (const pid of ['gemini', 'groq', 'openrouter', 'nvcf', 'opencode']) {
       updateProvider(analysisId, pid, { status: 'failed', completedAt: Date.now() });
     }
     sink({ type: 'final', analysisId, status: 'failed', error: msg });

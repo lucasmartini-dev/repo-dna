@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { requireSession, sendJson, getHeader } from '../../src/api/helpers';
 import { createAnalysis, getRunningAnalysisForUsername, hasRunningAnalysisForSession } from '../../src/db/analyses';
 import { createProviderRows } from '../../src/db/providers';
-import { PROVIDER_IDS } from '@repo/shared';
+import { PROVIDER_IDS, PROVIDER_MODELS } from '@repo/shared';
 import { startAnalysisAsync } from '../../src/api/router';
 
 export async function analyzeHandler(req: NextApiRequest, res: NextApiResponse) {
@@ -24,8 +24,12 @@ export async function analyzeHandler(req: NextApiRequest, res: NextApiResponse) 
 
   const analysisId = randomUUID();
   createAnalysis(analysisId, sessionId, username);
-  createProviderRows(analysisId, PROVIDER_IDS);
-  startAnalysisAsync(analysisId, username);
+  const models: Record<string, string> = {};
+  for (const id of PROVIDER_IDS) {
+    models[id] = PROVIDER_MODELS[id]?.[0]?.id ?? '';
+  }
+  createProviderRows(analysisId, PROVIDER_IDS, models);
+  startAnalysisAsync(analysisId, username, models);
   sendJson(res, 201, { analysisId, username, shared: false });
 }
 

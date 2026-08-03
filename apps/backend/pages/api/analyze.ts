@@ -9,6 +9,7 @@ import { startAnalysisAsync } from '../../src/api/router';
 export async function analyzeHandler(req: NextApiRequest, res: NextApiResponse) {
   const sessionId = getHeader(req, 'x-session-id');
   const username = req.body?.username as string | undefined;
+  const bodyModels = (req.body?.models as Record<string, string>) ?? {};
   if (!sessionId) return sendJson(res, 401, { error: 'missing session' });
   if (!requireSession(sessionId)) return sendJson(res, 401, { error: 'invalid or expired session' });
   if (!username) return sendJson(res, 400, { error: 'username is required' });
@@ -26,7 +27,7 @@ export async function analyzeHandler(req: NextApiRequest, res: NextApiResponse) 
   createAnalysis(analysisId, sessionId, username);
   const models: Record<string, string> = {};
   for (const id of PROVIDER_IDS) {
-    models[id] = PROVIDER_MODELS[id]?.[0]?.id ?? '';
+    models[id] = bodyModels[id] || PROVIDER_MODELS[id]?.[0]?.id || '';
   }
   createProviderRows(analysisId, PROVIDER_IDS, models);
   startAnalysisAsync(analysisId, username, models);

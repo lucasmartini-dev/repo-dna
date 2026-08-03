@@ -35,7 +35,7 @@ describe('session', () => {
 describe('analyze', () => {
   it('creates session and starts analysis for unknown session', async () => {
     const { req, res } = createMockReqRes();
-    req.body = { username };
+    req.body = { username, models: {} };
     req.headers = { 'x-session-id': 'nope' };
     await analyzeHandler(req, res);
     expect(res.statusCode).toBe(201);
@@ -44,7 +44,7 @@ describe('analyze', () => {
   it('returns 201 for a new analysis', async () => {
     createSession(sessionId, Date.now() + 43_200_000);
     const { req, res } = createMockReqRes();
-    req.body = { username };
+    req.body = { username, models: { gemini: 'gemini-2.0-flash' } };
     req.headers = { 'x-session-id': sessionId };
     await analyzeHandler(req, res);
     expect(res.statusCode).toBe(201);
@@ -54,10 +54,30 @@ describe('analyze', () => {
     createSession(sessionId, Date.now() + 43_200_000);
     createAnalysis(analysisId, sessionId, faker.internet.userName());
     const { req, res } = createMockReqRes();
-    req.body = { username };
+    req.body = { username, models: {} };
     req.headers = { 'x-session-id': sessionId };
     await analyzeHandler(req, res);
     expect(res.statusCode).toBe(409);
+  });
+
+  it('passes models to createProviderRows and startAnalysisAsync', async () => {
+    const { startAnalysisAsync: mockStart } = jest.requireMock('../../src/api/router');
+    createSession(sessionId, Date.now() + 43_200_000);
+    const { req, res } = createMockReqRes();
+    const models = { gemini: 'gemini-2.0-flash', groq: 'llama-3.1-8b-instant' };
+    req.body = { username, models };
+    req.headers = { 'x-session-id': sessionId };
+    await analyzeHandler(req, res);
+    expect(res.statusCode).toBe(201);
+    const body = res._getJSON() as { analysisId: string };
+    expect(mockStart).toHaveBeenCalledWith(
+      body.analysisId,
+      username,
+      expect.objectContaining({
+        gemini: 'gemini-2.0-flash',
+        groq: 'llama-3.1-8b-instant',
+      })
+    );
   });
 });
 

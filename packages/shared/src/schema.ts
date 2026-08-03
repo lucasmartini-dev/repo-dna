@@ -21,7 +21,7 @@ export const VerdictSchema = z.object({
 
 export const ScorecardSchema = z.object({
   provider: z.enum(PROVIDER_IDS),
-  model: z.string().nullable(),
+  model: z.string().nullable().default(null),
   status: z.enum(['pending', 'running', 'succeeded', 'failed']),
   progress: z.number().int().min(0).max(100),
   startedAt: z.string().nullable(),

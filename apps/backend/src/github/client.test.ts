@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { buildSnapshot, GitHubTimeoutError } from './client';
+import { buildSnapshot, fetchRepoReadme, GitHubTimeoutError } from './client';
 import type { GitHubProfile, GitHubRepo } from './types';
 
 const username = faker.internet.userName();
@@ -66,5 +66,22 @@ describe('GitHubTimeoutError', () => {
     expect(err.name).toBe('GitHubTimeoutError');
     expect(err.message).toBe('timed out');
     expect(err).toBeInstanceOf(Error);
+  });
+});
+
+describe('fetchRepoReadme', () => {
+  it('decodes base64 content', async () => {
+    const b64 = Buffer.from('hello world').toString('base64');
+    global.fetch = jest.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({ content: b64, encoding: 'base64' }) })
+    ) as jest.Mock;
+    const result = await fetchRepoReadme('test', 'repo');
+    expect(result).toBe('hello world');
+  });
+
+  it('returns null on error', async () => {
+    global.fetch = jest.fn(() => Promise.reject(new Error('fail'))) as jest.Mock;
+    const result = await fetchRepoReadme('test', 'repo');
+    expect(result).toBeNull();
   });
 });

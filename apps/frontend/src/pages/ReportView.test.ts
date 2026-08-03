@@ -59,5 +59,6 @@ describe('ReportView', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('Code Quality');
     expect(wrapper.text()).toContain(scorecard.verdict.summary);
+    expect(wrapper.text()).toContain('Analyze Repo');
   });
 });

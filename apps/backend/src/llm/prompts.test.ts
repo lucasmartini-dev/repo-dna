@@ -1,5 +1,6 @@
 import { extractJson, parseScorecardJson } from './json';
 import { buildSystemPrompt } from './prompts';
+import { buildRepoSystemPrompt, buildRepoUserPrompt } from './repo-prompts';
 
 describe('buildSystemPrompt', () => {
   it('includes seniority dimension with 1-3=Junior scale hint', () => {
@@ -46,5 +47,25 @@ describe('parseScorecardJson', () => {
 
   it('throws on invalid input', () => {
     expect(() => parseScorecardJson('{"provider":"gemini"}', 'gemini')).toThrow();
+  });
+});
+
+describe('buildRepoSystemPrompt', () => {
+  it('includes all 5 tech dimensions', () => {
+    const p = buildRepoSystemPrompt();
+    expect(p).toContain('code_quality');
+    expect(p).toContain('documentation');
+    expect(p).toContain('workflow');
+    expect(p).toContain('collaboration');
+    expect(p).toContain('activity');
+  });
+});
+
+describe('buildRepoUserPrompt', () => {
+  it('truncates README to 8000 chars', () => {
+    const long = 'x'.repeat(10000);
+    const p = buildRepoUserPrompt('repo', 'desc', 'TS', 5, [], long);
+    const readmeSection = p.split('README:\n')[1];
+    expect(readmeSection.length).toBeLessThanOrEqual(8001);
   });
 });

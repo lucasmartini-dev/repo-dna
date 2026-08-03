@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { sendJson } from '../../../src/api/helpers';
-import { getAnalysis } from '../../../src/db/analyses';
-import { getLatestRepoAnalysis } from '../../../src/db/repo-analyses';
-import { runRepoAnalysis } from '../../../src/api/repo-runner';
+import { sendJson } from '../../../../src/api/helpers';
+import { getAnalysis } from '../../../../src/db/analyses';
+import { getLatestRepoAnalysis } from '../../../../src/db/repo-analyses';
+import { runRepoAnalysis } from '../../../../src/api/repo-runner';
 
 async function repoHandler(req: NextApiRequest, res: NextApiResponse) {
   const analysisId = req.query.id as string;

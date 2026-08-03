@@ -10,6 +10,7 @@ import {
   updateAnalysisStatus,
 } from './analyses';
 import { createProviderRows, getProviderRows, updateProvider, getProviderRow, touchProviderAttempt } from './providers';
+import { createRepoAnalysis, getLatestRepoAnalysis, updateRepoAnalysis } from './repo-analyses';
 import { PROVIDER_IDS } from '@repo/shared';
 
 const s1 = faker.string.uuid();
@@ -84,5 +85,29 @@ describe('providers', () => {
 
     touchProviderAttempt(a1, 'groq', 1_700_000_000_000);
     expect(getProviderRow(a1, 'groq')?.lastAttemptAt).toBe(1_700_000_000_000);
+  });
+});
+
+describe('repo_analyses', () => {
+  it('creates and reads a repo analysis', () => {
+    createSession(s1, 1_700_000_000_000 + 43_200_000);
+    createAnalysis(a1, s1, username);
+    const id = 'ra1';
+    createRepoAnalysis(id, a1, 'test-repo', username, 'gemini', 'gemini-2.0-flash');
+    const ra = getLatestRepoAnalysis(a1, 'test-repo');
+    expect(ra).toBeTruthy();
+    expect(ra?.status).toBe('pending');
+    expect(ra?.provider).toBe('gemini');
+    expect(ra?.model).toBe('gemini-2.0-flash');
+  });
+
+  it('updates repo analysis status and scorecard', () => {
+    createSession(s1, 1_700_000_000_000 + 43_200_000);
+    createAnalysis(a1, s1, username);
+    createRepoAnalysis('ra2', a1, 'repo2', username, 'groq', null);
+    updateRepoAnalysis('ra2', { status: 'succeeded', scorecard: JSON.stringify({ key: 'val' }) });
+    const ra = getLatestRepoAnalysis(a1, 'repo2');
+    expect(ra?.status).toBe('succeeded');
+    expect(JSON.parse(ra?.scorecard ?? '{}')).toEqual({ key: 'val' });
   });
 });

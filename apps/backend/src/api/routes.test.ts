@@ -3,10 +3,12 @@ import { createMockReqRes } from '../test-helpers';
 import { sessionHandler } from '../../pages/api/session';
 import { analyzeHandler } from '../../pages/api/analyze';
 import { retryHandler } from '../../pages/api/analysis/[id]/retry';
+import repoHandler from '../../pages/api/analysis/[id]/repo';
 import { resetDbForTests } from '../db/database';
 import { createSession } from '../db/sessions';
 import { createAnalysis } from '../db/analyses';
 import { createProviderRows, touchProviderAttempt } from '../db/providers';
+import { createRepoAnalysis } from '../db/repo-analyses';
 
 jest.mock('../../src/api/router', () => ({
   startAnalysisAsync: jest.fn(),
@@ -34,6 +36,10 @@ jest.mock('../../src/github/client', () => ({
 
 jest.mock('../../src/analysis/runner', () => ({
   runProviders: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../../src/api/repo-runner', () => ({
+  runRepoAnalysis: jest.fn(),
 }));
 
 const mockRunProviders = jest.requireMock('../../src/analysis/runner').runProviders as jest.Mock;
@@ -161,5 +167,59 @@ describe('retry', () => {
       expect.any(Function),
       expect.any(Function)
     );
+  });
+});
+
+describe('repo', () => {
+  it('returns 200 and starts repo analysis on POST', async () => {
+    createSession(sessionId, Date.now() + 43_200_000);
+    createAnalysis(analysisId, sessionId, username);
+    const { req, res } = createMockReqRes();
+    req.method = 'POST';
+    req.query = { id: analysisId };
+    req.body = { repo: 'test-repo', provider: 'gemini', model: 'gemini-2.0-flash', stars: 5 };
+    await repoHandler(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(res._getJSON()).toEqual({ status: 'started' });
+  });
+
+  it('returns 404 when analysis not found on POST', async () => {
+    const { req, res } = createMockReqRes();
+    req.method = 'POST';
+    req.query = { id: 'missing' };
+    req.body = { repo: 'test-repo', provider: 'gemini' };
+    await repoHandler(req, res);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('returns 200 with repo analysis on GET', async () => {
+    createSession(sessionId, Date.now() + 43_200_000);
+    createAnalysis(analysisId, sessionId, username);
+    createRepoAnalysis('ra1', analysisId, 'test-repo', username, 'gemini', 'gemini-2.0-flash');
+    const { req, res } = createMockReqRes();
+    req.method = 'GET';
+    req.query = { id: analysisId, repo: 'test-repo' };
+    await repoHandler(req, res);
+    expect(res.statusCode).toBe(200);
+    const body = res._getJSON() as { repoAnalysis: { repoName: string; status: string; provider: string } };
+    expect(body.repoAnalysis.repoName).toBe('test-repo');
+    expect(body.repoAnalysis.status).toBe('pending');
+    expect(body.repoAnalysis.provider).toBe('gemini');
+  });
+
+  it('returns 404 when repo analysis not found on GET', async () => {
+    const { req, res } = createMockReqRes();
+    req.method = 'GET';
+    req.query = { id: analysisId, repo: 'nonexistent' };
+    await repoHandler(req, res);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('returns 400 when repo query param missing on GET', async () => {
+    const { req, res } = createMockReqRes();
+    req.method = 'GET';
+    req.query = { id: analysisId };
+    await repoHandler(req, res);
+    expect(res.statusCode).toBe(400);
   });
 });
